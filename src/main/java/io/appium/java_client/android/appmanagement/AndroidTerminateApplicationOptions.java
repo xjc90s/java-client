@@ -16,14 +16,15 @@
 
 package io.appium.java_client.android.appmanagement;
 
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.appmanagement.BaseTerminateApplicationOptions;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 public class AndroidTerminateApplicationOptions extends
@@ -38,15 +39,15 @@ public class AndroidTerminateApplicationOptions extends
      * @return self instance for chaining.
      */
     public AndroidTerminateApplicationOptions withTimeout(Duration timeout) {
-        checkArgument(!checkNotNull(timeout).isNegative(), "The timeout value cannot be negative");
+        checkArgument(!requireNonNull(timeout).isNegative(), "The timeout value cannot be negative");
         this.timeout = timeout;
         return this;
     }
 
     @Override
     public Map<String, Object> build() {
-        final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        ofNullable(timeout).map(x -> builder.put("timeout", x.toMillis()));
-        return builder.build();
+        var map = new HashMap<String, Object>();
+        ofNullable(timeout).ifPresent(x -> map.put("timeout", x.toMillis()));
+        return Collections.unmodifiableMap(map);
     }
 }

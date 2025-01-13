@@ -16,7 +16,6 @@
 
 package io.appium.java_client;
 
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.serverevents.CommandEvent;
 import io.appium.java_client.serverevents.CustomEvent;
 import io.appium.java_client.serverevents.ServerEvents;
@@ -41,7 +40,7 @@ public interface LogsEvents extends ExecutesMethod {
      * @throws org.openqa.selenium.WebDriverException if there was a failure while executing the script
      */
     default void logEvent(CustomEvent event) {
-        execute(LOG_EVENT, ImmutableMap.of("vendor", event.getVendor(), "event", event.getEventName()));
+        execute(LOG_EVENT, Map.of("vendor", event.getVendor(), "event", event.getEventName()));
     }
 
     /**
@@ -63,8 +62,8 @@ public interface LogsEvents extends ExecutesMethod {
             .stream()
             .map((Map<String, Object> cmd) -> new CommandEvent(
                 (String) cmd.get("cmd"),
-                ((Long) cmd.get("startTime")),
-                ((Long) cmd.get("endTime"))
+                (Long) cmd.get("startTime"),
+                (Long) cmd.get("endTime")
             ))
             .collect(Collectors.toList());
 

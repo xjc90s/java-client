@@ -16,12 +16,10 @@
 
 package io.appium.java_client.remote;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.net.HttpHeaders;
 import io.appium.java_client.AppiumClientConfig;
-import io.appium.java_client.AppiumUserAgentFilter;
 import io.appium.java_client.internal.ReflectionHelpers;
+import lombok.Getter;
 import org.openqa.selenium.SessionNotCreatedException;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.remote.Command;
@@ -48,21 +46,18 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Throwables.throwIfUnchecked;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static org.openqa.selenium.remote.DriverCommand.NEW_SESSION;
 
 public class AppiumCommandExecutor extends HttpCommandExecutor {
-    // https://github.com/appium/appium-base-driver/pull/400
-    private static final String IDEMPOTENCY_KEY_HEADER = "X-Idempotency-Key";
 
     private final Optional<DriverService> serviceOptional;
-
+    @Getter
     private final HttpClient.Factory httpClientFactory;
-
+    @Getter
     private final AppiumClientConfig appiumClientConfig;
 
     /**
@@ -90,14 +85,14 @@ public class AppiumCommandExecutor extends HttpCommandExecutor {
 
     public AppiumCommandExecutor(Map<String, CommandInfo> additionalCommands, DriverService service,
                                  HttpClient.Factory httpClientFactory) {
-        this(additionalCommands, checkNotNull(service), httpClientFactory,
-                AppiumClientConfig.defaultConfig().baseUrl(checkNotNull(service).getUrl()));
+        this(additionalCommands, requireNonNull(service), httpClientFactory,
+                AppiumClientConfig.defaultConfig().baseUrl(requireNonNull(service).getUrl()));
     }
 
     public AppiumCommandExecutor(Map<String, CommandInfo> additionalCommands, URL addressOfRemoteServer,
                                  HttpClient.Factory httpClientFactory) {
         this(additionalCommands, null, httpClientFactory,
-                AppiumClientConfig.defaultConfig().baseUrl(checkNotNull(addressOfRemoteServer)));
+                AppiumClientConfig.defaultConfig().baseUrl(requireNonNull(addressOfRemoteServer)));
     }
 
     public AppiumCommandExecutor(Map<String, CommandInfo> additionalCommands, AppiumClientConfig appiumClientConfig) {
@@ -106,13 +101,13 @@ public class AppiumCommandExecutor extends HttpCommandExecutor {
 
     public AppiumCommandExecutor(Map<String, CommandInfo> additionalCommands, URL addressOfRemoteServer) {
         this(additionalCommands, null, HttpClient.Factory.createDefault(),
-                AppiumClientConfig.defaultConfig().baseUrl(checkNotNull(addressOfRemoteServer)));
+                AppiumClientConfig.defaultConfig().baseUrl(requireNonNull(addressOfRemoteServer)));
     }
 
     public AppiumCommandExecutor(Map<String, CommandInfo> additionalCommands, URL addressOfRemoteServer,
                                  AppiumClientConfig appiumClientConfig) {
         this(additionalCommands, null, HttpClient.Factory.createDefault(),
-                appiumClientConfig.baseUrl(checkNotNull(addressOfRemoteServer)));
+                appiumClientConfig.baseUrl(requireNonNull(addressOfRemoteServer)));
     }
 
     public AppiumCommandExecutor(Map<String, CommandInfo> additionalCommands, DriverService service) {
@@ -125,38 +120,39 @@ public class AppiumCommandExecutor extends HttpCommandExecutor {
         this(additionalCommands, service, HttpClient.Factory.createDefault(), appiumClientConfig);
     }
 
+    @Deprecated
     @SuppressWarnings("SameParameterValue")
     protected <B> B getPrivateFieldValue(
             Class<? extends CommandExecutor> cls, String fieldName, Class<B> fieldType) {
         return ReflectionHelpers.getPrivateFieldValue(cls, this, fieldName, fieldType);
     }
 
+    @Deprecated
     @SuppressWarnings("SameParameterValue")
     protected void setPrivateFieldValue(
             Class<? extends CommandExecutor> cls, String fieldName, Object newValue) {
         ReflectionHelpers.setPrivateFieldValue(cls, this, fieldName, newValue);
     }
 
-    protected Map<String, CommandInfo> getAdditionalCommands() {
+    public Map<String, CommandInfo> getAdditionalCommands() {
         //noinspection unchecked
         return getPrivateFieldValue(HttpCommandExecutor.class, "additionalCommands", Map.class);
     }
 
     protected CommandCodec<HttpRequest> getCommandCodec() {
-        //noinspection unchecked
-        return getPrivateFieldValue(HttpCommandExecutor.class, "commandCodec", CommandCodec.class);
+        return this.commandCodec;
     }
 
     public void setCommandCodec(CommandCodec<HttpRequest> newCodec) {
-        setPrivateFieldValue(HttpCommandExecutor.class, "commandCodec", newCodec);
+        this.commandCodec = newCodec;
     }
 
     public void setResponseCodec(ResponseCodec<HttpResponse> codec) {
-        setPrivateFieldValue(HttpCommandExecutor.class, "responseCodec", codec);
+        this.responseCodec = codec;
     }
 
     protected HttpClient getClient() {
-        return getPrivateFieldValue(HttpCommandExecutor.class, "client", HttpClient.class);
+        return this.client;
     }
 
     /**
@@ -179,14 +175,7 @@ public class AppiumCommandExecutor extends HttpCommandExecutor {
             throw new SessionNotCreatedException("Session already exists");
         }
 
-        ProtocolHandshake.Result result = new AppiumProtocolHandshake().createSession(
-                getClient().with((httpHandler) -> (req) -> {
-                    req.setHeader(HttpHeaders.USER_AGENT,
-                            AppiumUserAgentFilter.buildUserAgent(req.getHeader(HttpHeaders.USER_AGENT)));
-                    req.setHeader(IDEMPOTENCY_KEY_HEADER, UUID.randomUUID().toString().toLowerCase());
-                    return httpHandler.execute(req);
-                }), command
-        );
+        var result = new ProtocolHandshake().createSession(getClient(), command);
         Dialect dialect = result.getDialect();
         if (!(dialect.getCommandCodec() instanceof W3CHttpCommandCodec)) {
             throw new SessionNotCreatedException("Only W3C sessions are supported. "
@@ -204,7 +193,11 @@ public class AppiumCommandExecutor extends HttpCommandExecutor {
     }
 
     public void refreshAdditionalCommands() {
-        getAdditionalCommands().forEach(this::defineCommand);
+        getAdditionalCommands().forEach(super::defineCommand);
+    }
+
+    public void defineCommand(String commandName, CommandInfo info) {
+        super.defineCommand(commandName, info);
     }
 
     @SuppressWarnings("unchecked")
@@ -258,8 +251,7 @@ public class AppiumCommandExecutor extends HttpCommandExecutor {
                     }
 
                     return new WebDriverException("The appium server has accidentally died!", rootCause);
-                }).orElseGet((Supplier<WebDriverException>) () ->
-                        new WebDriverException(rootCause.getMessage(), rootCause));
+                }).orElseGet(() -> new WebDriverException(rootCause.getMessage(), rootCause));
             }
             throwIfUnchecked(t);
             throw new WebDriverException(t);

@@ -31,7 +31,7 @@ import java.util.Base64;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 @Accessors(chain = true)
@@ -81,7 +81,7 @@ public class ScreenshotState {
      * @param stateProvider lambda function, which returns a screenshot for further comparison
      */
     public ScreenshotState(ComparesImages comparator, Supplier<BufferedImage> stateProvider) {
-        this.comparator = checkNotNull(comparator);
+        this.comparator = requireNonNull(comparator);
         this.stateProvider = stateProvider;
     }
 
@@ -110,7 +110,7 @@ public class ScreenshotState {
      * @return self instance for chaining
      */
     public ScreenshotState remember(BufferedImage customInitialState) {
-        this.previousScreenshot = checkNotNull(customInitialState);
+        this.previousScreenshot = requireNonNull(customInitialState);
         return this;
     }
 
@@ -175,7 +175,7 @@ public class ScreenshotState {
      * @throws ScreenshotComparisonError   if {@link #remember()} method has not been invoked yet
      */
     public ScreenshotState verifyChanged(Duration timeout, double minScore) {
-        return checkState((x) -> x < minScore, timeout);
+        return checkState(x -> x < minScore, timeout);
     }
 
     /**
@@ -190,7 +190,7 @@ public class ScreenshotState {
      * @throws ScreenshotComparisonError   if {@link #remember()} method has not been invoked yet
      */
     public ScreenshotState verifyNotChanged(Duration timeout, double minScore) {
-        return checkState((x) -> x >= minScore, timeout);
+        return checkState(x -> x >= minScore, timeout);
     }
 
     /**

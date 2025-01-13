@@ -16,6 +16,7 @@
 
 package io.appium.java_client.pagefactory_tests;
 
+import io.appium.java_client.TestUtils;
 import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.pagefactory.AndroidFindBy;
 import io.appium.java_client.pagefactory.AppiumFieldDecorator;
@@ -26,13 +27,13 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.FindBys;
 import org.openqa.selenium.support.PageFactory;
 
 import java.util.List;
 
-import static io.appium.java_client.TestResources.helloAppiumHtml;
 import static io.appium.java_client.pagefactory.LocatorGroupStrategy.ALL_POSSIBLE;
 import static io.github.bonigarcia.wdm.WebDriverManager.chromedriver;
 import static java.time.Duration.ofSeconds;
@@ -40,6 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class DesktopBrowserCompatibilityTest {
+    private static final String HELLO_APPIUM_HTML =
+            TestUtils.resourcePathToAbsolutePath("html/hello appium - saved page.htm").toUri().toString();
 
     @HowToUseLocators(iOSXCUITAutomation = ALL_POSSIBLE)
     @AndroidFindBy(className = "someClass")
@@ -58,10 +61,10 @@ public class DesktopBrowserCompatibilityTest {
     }
 
     @Test public void chromeTest() {
-        WebDriver driver = new ChromeDriver();
+        WebDriver driver = new ChromeDriver(new ChromeOptions().addArguments("--headless=new"));
         try {
             PageFactory.initElements(new AppiumFieldDecorator(driver, ofSeconds(15)), this);
-            driver.get(helloAppiumHtml().toUri().toString());
+            driver.get(HELLO_APPIUM_HTML);
             assertNotEquals(0, foundLinks.size());
             assertNotEquals(0, main.size());
             assertNull(trap1);

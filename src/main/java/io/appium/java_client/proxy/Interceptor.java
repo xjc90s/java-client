@@ -25,32 +25,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.WeakHashMap;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
+import static io.appium.java_client.proxy.MethodCallListener.UNSET;
 
 public class Interceptor {
-    private static final Logger logger = LoggerFactory.getLogger(Interceptor.class);
-    public static final Map<Object, Collection<MethodCallListener>> LISTENERS = new WeakHashMap<>();
-    private static final Set<String> OBJECT_METHOD_NAMES = Stream.of(Object.class.getMethods())
-            .map(Method::getName)
-            .collect(Collectors.toSet());
+    private static final Logger LOGGER = LoggerFactory.getLogger(Interceptor.class);
+
+    private Interceptor() {
+    }
 
     /**
      * A magic method used to wrap public method calls in classes
-     * patched by ByteBuddy and acting as proxies.
+     * patched by ByteBuddy and acting as proxies. The performance
+     * of this method is mission-critical as it gets called upon
+     * every invocation of any method of the proxied class.
      *
-     * @param self The reference to the original instance.
-     * @param method The reference to the original method.
-     * @param args The reference to method args.
+     * @param self     The reference to the original instance.
+     * @param method   The reference to the original method.
+     * @param args     The reference to method args.
      * @param callable The reference to the non-patched callable to avoid call recursion.
      * @return Either the original method result or the patched one.
      */
+    @SuppressWarnings("unused")
     @RuntimeType
     public static Object intercept(
             @This Object self,
@@ -58,51 +55,54 @@ public class Interceptor {
             @AllArguments Object[] args,
             @SuperCall Callable<?> callable
     ) throws Throwable {
-        if (OBJECT_METHOD_NAMES.contains(method.getName())) {
-            return callable.call();
-        }
-        Collection<MethodCallListener> listeners = LISTENERS.get(self);
-        if (listeners == null || listeners.isEmpty()) {
+        var listeners = ((HasMethodCallListeners) self).getMethodCallListeners();
+        if (listeners == null || listeners.length == 0) {
             return callable.call();
         }
 
-        listeners.forEach(listener -> {
+        for (var listener : listeners) {
             try {
                 listener.beforeCall(self, method, args);
             } catch (NotImplementedException e) {
                 // ignore
             } catch (Exception e) {
-                logger.error(
-                        String.format("Got an unexpected error in beforeCall listener of %s.%s method",
-                                self.getClass().getName(), method.getName()), e
+                LOGGER.atError().log("Got an unexpected error in beforeCall listener of {}.{} method",
+                        self.getClass().getName(), method.getName(), e
                 );
             }
-        });
+        }
 
-        final UUID noResult = UUID.randomUUID();
-        Object result = noResult;
-        for (MethodCallListener listener : listeners) {
+        Object result = UNSET;
+        for (var listener : listeners) {
             try {
                 result = listener.call(self, method, args, callable);
-                break;
+                if (result != UNSET) {
+                    break;
+                }
             } catch (NotImplementedException e) {
                 // ignore
             } catch (Exception e) {
                 try {
-                    return listener.onError(self, method, args, e);
+                    result = listener.onError(self, method, args, e);
+                    if (result != UNSET) {
+                        return result;
+                    }
                 } catch (NotImplementedException ignore) {
                     // ignore
                 }
                 throw e;
             }
         }
-        if (noResult.equals(result)) {
+        if (UNSET == result) {
             try {
                 result = callable.call();
             } catch (Exception e) {
-                for (MethodCallListener listener : listeners) {
+                for (var listener : listeners) {
                     try {
-                        return listener.onError(self, method, args, e);
+                        result = listener.onError(self, method, args, e);
+                        if (result != UNSET) {
+                            return result;
+                        }
                     } catch (NotImplementedException ignore) {
                         // ignore
                     }
@@ -111,19 +111,18 @@ public class Interceptor {
             }
         }
 
-        final Object endResult = result == noResult ? null : result;
-        listeners.forEach(listener -> {
+        final Object endResult = result == UNSET ? null : result;
+        for (var listener : listeners) {
             try {
                 listener.afterCall(self, method, args, endResult);
             } catch (NotImplementedException e) {
                 // ignore
             } catch (Exception e) {
-                logger.error(
-                        String.format("Got an unexpected error in afterCall listener of %s.%s method",
-                                self.getClass().getName(), method.getName()), e
+                LOGGER.atError().log("Got an unexpected error in afterCall listener of {}.{} method",
+                        self.getClass().getName(), method.getName(), e
                 );
             }
-        });
+        }
         return endResult;
     }
 }

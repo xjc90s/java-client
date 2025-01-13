@@ -5,6 +5,231 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+_9.3.0_
+- **[ENHANCEMENTS]**
+  - Add support for FlutterIOSDriver. [#2206](https://github.com/appium/java-client/pull/2206)
+  - add support for FlutterAndroidDriver. [#2203](https://github.com/appium/java-client/pull/2203)
+  - Add locator types supported by flutter integration driver. [#2201](https://github.com/appium/java-client/pull/2201)
+  - add flutter driver commands to support camera mocking. [#2207](https://github.com/appium/java-client/pull/2207)
+  - Add ability to use secure WebSocket to listen Logcat messages. [#2182](https://github.com/appium/java-client/pull/2182)
+  - Add mobile: replacements to clipboard API wrappers. [#2188](https://github.com/appium/java-client/pull/2188)
+- **[DEPRECATION]**
+  - Deprecate obsolete TouchAction helpers. [#2199](https://github.com/appium/java-client/pull/2199)
+- **[REFACTOR]**
+  - Bump iOS version in CI. [#2167](https://github.com/appium/java-client/pull/2167)
+- **[DOCUMENTATION]**
+  - README updates. [#2193](https://github.com/appium/java-client/pull/2193)
+- **[DEPENDENCY UPDATES]**
+  - `org.junit.jupiter:junit-jupiter` was updated to 5.10.3.
+  - `org.projectlombok:lombok` was updated to 1.18.34.
+  - `io.github.bonigarcia:webdrivermanager` was updated to 5.9.1.
+  - `org.owasp.dependencycheck` was updated to 10.0.3.
+  - `org.apache.commons:commons-lang3` was updated to 3.15.0.
+
+_9.2.3_
+- **[BUG FIX]**
+  - Properly represent `FeaturesMatchingResult` model if `multiple` option is enabled [#2170](https://github.com/appium/java-client/pull/2170)
+  - Use current class loader for the ByteBuddy wrapper [#2172](https://github.com/appium/java-client/pull/2172) \
+    This fixes errors like `NoClassDefFoundError: org/openqa/selenium/remote/RemoteWebElement`, `NoClassDefFoundError: io/appium/java_client/proxy/HasMethodCallListeners` when `PageFactory` is used.
+  - Correct extension name for `mobile: replaceElementValue` [#2171](https://github.com/appium/java-client/pull/2171)
+- **[DEPRECATION]**
+  - Deprecate `AppiumProtocolHandshake` class [#2173](https://github.com/appium/java-client/pull/2173) \
+    The original `ProtocolHandshake` class only supports W3C protocol now. There is no need to hack it anymore.
+- **[REFACTOR]**
+  - Replace Guava `HttpHeaders` with Selenium `HttpHeader` [#2151](https://github.com/appium/java-client/pull/2151)
+- **[DEPENDENCY CHANGE]**
+  - Bump SLF4J from `2.0.12` to `2.0.13` [#2158](https://github.com/appium/java-client/pull/2158)
+  - Bump Gson from `2.10.1` to `2.11.0` [#2175](https://github.com/appium/java-client/pull/2175)
+
+_9.2.2_
+- **[BUG FIX]**
+  - fix: Fix building of Android key event parameters [#2145](https://github.com/appium/java-client/pull/2145)
+  - fix: Fix building of Android geo location parameters [#2146](https://github.com/appium/java-client/pull/2146)
+
+_9.2.1_
+- **[REFACTOR]**
+  - Replace private usages of Guava Collections API with Java Collections API [#2136](https://github.com/appium/java-client/pull/2136)
+  - Remove usages of Guava's `@VisibleForTesting` annotation [#2138](https://github.com/appium/java-client/pull/2138). Previously opened internal API marked with `@VisibleForTesting` annotation is private now:
+    - `io.appium.java_client.internal.filters.AppiumUserAgentFilter#containsAppiumName`
+    - `io.appium.java_client.service.local.AppiumDriverLocalService#parseSlf4jContextFromLogMessage`
+- **[DEPENDENCY CHANGE]**
+  - Bump minimum supported Selenium version from `4.17.0` to `4.19.0` [#2142](https://github.com/appium/java-client/pull/2142)
+
+_9.2.0_
+- **[ENHANCEMENTS]**
+  - Incorporate poll delay mechanism into `AppiumFluentWait` [#2116](https://github.com/appium/java-client/pull/2116) (Closes [#2111](https://github.com/appium/java-client/pull/2111))
+  - Make server startup error messages more useful [#2130](https://github.com/appium/java-client/pull/2130)
+- **[BUG FIX]**
+  - Set correct geolocation coordinates of the current device [#2109](https://github.com/appium/java-client/pull/2109) (Fixes [#2108](https://github.com/appium/java-client/pull/2108))
+  - Always release annotated element reference from the builder instance [#2128](https://github.com/appium/java-client/pull/2128)
+  - Cache dynamic proxy classes created by ByteBuddy [#2129](https://github.com/appium/java-client/pull/2129) (Fixes [#2119](https://github.com/appium/java-client/pull/2119))
+- **[DEPENDENCY CHANGE]**
+  - Bump SLF4J from `2.0.11` to `2.0.12` [#2115](https://github.com/appium/java-client/pull/2115)
+- **[DOCUMENTATION]**
+  - Improve release steps [#2107](https://github.com/appium/java-client/pull/2107)
+
+_9.1.0_
+- **[ENHANCEMENTS]**
+  - Introduce better constructor argument validation for the `AppiumFieldDecorator` class. [#2070](https://github.com/appium/java-client/pull/2070)
+  - Add `toString` to `AppiumClientConfig`. [#2076](https://github.com/appium/java-client/pull/2076)
+  - Perform listeners cleanup periodically. [#2077](https://github.com/appium/java-client/pull/2077)
+  - Add non-W3C context, orientation and rotation management endpoints removed from Selenium client. [#2093](https://github.com/appium/java-client/pull/2093)
+  - Add non-W3C Location-management endpoints deprecated in Selenium client. [#2098](https://github.com/appium/java-client/pull/2098)
+- **[BUG FIX]**
+  - Properly unwrap driver instance if the `ContextAware` object is deeply nested. [#2052](https://github.com/appium/java-client/pull/2052)
+  - Update hashing and iteration logic of page object items. [#2067](https://github.com/appium/java-client/pull/2067)
+  - Assign method call listeners directly to the proxy instance. [#2102](https://github.com/appium/java-client/pull/2102)
+  - Use JDK 11 to build Jitpack snapshots. [#2083](https://github.com/appium/java-client/pull/2083)
+- **[DEPRECATION]**
+  - Deprecate custom functional interfaces. [#2055](https://github.com/appium/java-client/pull/2055)
+- **[REFACTOR]**
+  - Use Java 9+ APIs instead of outdated/3rd-party APIs. [#2048](https://github.com/appium/java-client/pull/2048)
+  - Migrate to new Selenium API for process management. [#2054](https://github.com/appium/java-client/pull/2054)
+- **[DEPENDENCY CHANGE]**
+  - Bump minimum supported Selenium version from `4.14.1` to `4.17.0`.
+  - Bump SLF4J from `2.0.9` to `2.0.11`. [#2091](https://github.com/appium/java-client/pull/2091), [#2099](https://github.com/appium/java-client/pull/2099)
+- **[DOCUMENTATION]**
+  - Describe the release procedure. [#2104](https://github.com/appium/java-client/pull/2104)
+
+_9.0.0_
+- **[DOCUMENTATION]**
+  - Add 8 to 9 migration guide. [#2039](https://github.com/appium/java-client/pull/2039)
+- **[BREAKING CHANGE]** [#2036](https://github.com/appium/java-client/pull/2036)
+  - Set minimum Java version to 11.
+  - The previously deprecated MobileBy class has been removed. Use AppiumBy instead.
+  - The previously deprecated launchApp, resetApp and closeApp methods have been removed. Use extension methods instead.
+  - The previously deprecated WindowsBy class and related location strategies have been removed.
+  - The previously deprecated ByAll class has been removed in favour of the Selenium one.
+  - The previously deprecated AndroidMobileCapabilityType interface has been removed. Use driver options instead
+  - The previously deprecated IOSMobileCapabilityType interface has been removed. Use driver options instead
+  - The previously deprecated MobileCapabilityType interface has been removed. Use driver options instead
+  - The previously deprecated MobileOptions class has been removed. Use driver options instead
+  - The previously deprecated YouiEngineCapabilityType interface has been removed. Use driver options instead
+  - Removed several misspelled methods. Use properly spelled alternatives instead
+  - Removed startActivity method from AndroidDriver. Use 'mobile: startActivity' extension method instead
+  - Removed the previously deprecated APPIUM constant from the AutomationName interface
+  - Removed the previously deprecated PRE_LAUNCH value from the GeneralServerFlag enum
+  - Moved AppiumUserAgentFilter class to io.appium.java_client.internal.filters package
+- **[REFACTOR]**
+  - Align Selenium version in test dependencies. [#2042](https://github.com/appium/java-client/pull/2042)
+- **[DEPENDENCY CHANGE]**
+  - Removed dependencies to Apache Commons libraries.
+
+_8.6.0_
+
+- **[BUG FIX]**
+  - Exclude abstract methods from proxy matching. [#1937](https://github.com/appium/java-client/pull/1937)
+  - AppiumClientConfig#readTimeout to call super.readTimeout. [#1959](https://github.com/appium/java-client/pull/1959)
+  - Use weak references to elements inside of interceptor objects. [#1981](https://github.com/appium/java-client/pull/1981)
+  - Correct spelling and semantic mistakes in method naming. [#1970](https://github.com/appium/java-client/pull/1970)
+  - Change scope of selenium-support dependency to compile. [#2019](https://github.com/appium/java-client/pull/2019)
+  - Fix Code style issues to match Java standards. [#2017](https://github.com/appium/java-client/pull/2017)
+  - class of proxy method in AppiumClientConfig. [#2026](https://github.com/appium/java-client/pull/2026)
+- **[ENHANCEMENTS]**
+  - Mark Windows page object annotations as deprecated. [#1938](https://github.com/appium/java-client/pull/1938)
+  - Deprecate obsolete capabilities constants. [#1961](https://github.com/appium/java-client/pull/1961)
+  - patch AutomationName with Chromium. [#1993](https://github.com/appium/java-client/pull/1993)
+  - Implementation of Chromium driver plus capabilities. [#2003](https://github.com/appium/java-client/pull/2003)
+- **[REFACTOR]**
+  - Increase server start timeout for iOS tests. [#1983](https://github.com/appium/java-client/pull/1983)
+  - Fix Android test: --base-path arg must start with /. [#1952](https://github.com/appium/java-client/pull/1952)
+  - Added fixes for No service provider found for `io.appium.java_client.events.api.Listener`. [#1975](https://github.com/appium/java-client/pull/1975)
+  - Run tests against latest Selenium release. [#1978](https://github.com/appium/java-client/pull/1978)
+  - Use server releases from the main branch for testing. [#1994](https://github.com/appium/java-client/pull/1994)
+  - Remove obsolete API calls from tests. [#2006](https://github.com/appium/java-client/pull/2006)
+  - Automate more static code checks. [#2028](https://github.com/appium/java-client/pull/2028)
+  - Limit the maximum selenium version to 4.14. [#2031](https://github.com/appium/java-client/pull/2031)
+  - Remove the obsolete commons-validator dependency. [#2032](https://github.com/appium/java-client/pull/2032)
+- **[DOCUMENTATION]**
+  - Add the latest versions of clients to the compatibility matrix. [#1935](https://github.com/appium/java-client/pull/1935)
+  - Added correct url path for the latest appium documentation. [#1974](https://github.com/appium/java-client/pull/1974)
+  - Add Selenium 4.11.0, 4.12.0, 4.12.1 & 4.13.0 to compatibility matrix. [#1986](https://github.com/appium/java-client/pull/1986) & [#1999](https://github.com/appium/java-client/pull/1999) & [#2002](https://github.com/appium/java-client/pull/2025) & [#1986](https://github.com/appium/java-client/pull/2025)
+  - Add known compatibility issue for Selenium 4.12.1. [#2008](https://github.com/appium/java-client/pull/2008)
+- **[DEPENDENCY UPDATES]**
+  - `org.owasp.dependencycheck` was updated to 8.4.0.
+  - `org.junit.jupiter:junit-jupiter` was updated to 5.10.0.
+  - `commons-io:commons-io` was updated to 2.14.0.
+  - `checkstyle` was updated to 10.12.1.
+  - `org.apache.commons:commons-lang3` was updated to 3.13.0.
+  - `gradle` was updated to 8.4.0.
+  - `io.github.bonigarcia:webdrivermanager` was updated to 5.5.3.
+  - `org.seleniumhq.selenium:selenium-bom` was updated to 4.13.0.
+  - `org.projectlombok:lombok` was updated to 1.18.30.
+
+*8.5.1*
+- **[BUG FIX]**
+  - Use correct exception type for fallback at file/folder pulling. [#1912](https://github.com/appium/java-client/pull/1912)
+  - Update autoWebview capability name. [#1917](https://github.com/appium/java-client/pull/1917)
+- **[REFACTOR]**
+  - Move execution of E2E tests to GitHub Actions. [#1913](https://github.com/appium/java-client/pull/1913)
+  - Replace cglib with bytebuddy. [#1923](https://github.com/appium/java-client/pull/1923)
+  - Improve the error message on service startup. [#1928](https://github.com/appium/java-client/pull/1928)
+- **[DOCUMENTATION]**
+  - Initiate Selenium client compatibility matrix. [#1918](https://github.com/appium/java-client/pull/1918)
+- **[DEPENDENCY UPDATES]**
+  - `io.github.bonigarcia:webdrivermanager` was updated to 5.3.3.
+  - `org.projectlombok:lombok` was updated to 1.18.28.
+  - `commons-io:commons-io` was updated to 2.12.0.
+
+*8.5.0*
+- **[BUG FIX]**
+  - Restore Jitpack builds. [#1911](https://github.com/appium/java-client/pull/1911)
+  - Add fallback commands for file management APIs. [#1910](https://github.com/appium/java-client/pull/1910)
+- **[REFACTOR]**
+  - Replace performance data APIs with mobile extensions. [#1905](https://github.com/appium/java-client/pull/1905)
+- **[DEPENDENCY UPDATES]**
+  - `org.seleniumhq.selenium:selenium-java` was updated to 4.9.1.
+  - `org.junit.jupiter:junit-jupiter` was updated to 5.9.3.
+
+*8.4.0*
+- **[ENHANCEMENTS]**
+  - Added possibility to connect to a running session. [#1813](https://github.com/appium/java-client/pull/1813)
+  - deprecate tapWithShortPressDuration capability.[#1825](https://github.com/appium/java-client/pull/1825)
+  - Add SupportsEnforceAppInstallOption to XCUITestOptions.[#1895](https://github.com/appium/java-client/pull/1895)
+- **[BUG FIX]**
+  - Use ipv4 address instead of localhost. [#1815](https://github.com/appium/java-client/pull/1815)
+  - Fix test broken by updates in `appium-xcuitest-driver`. [#1839](https://github.com/appium/java-client/pull/1839)
+  - Merge misc tests suite into unit tests suite. [#1850](https://github.com/appium/java-client/pull/1850)
+  - Avoid NPE in destroyProcess call. [#1878](https://github.com/appium/java-client/pull/1878)
+  - Send arguments for mobile methods depending on the target platform. [#1897](https://github.com/appium/java-client/pull/1897)
+- **[REFACTOR]**
+  - Run Gradle wrapper validation only on Gradle files changes. [#1828](https://github.com/appium/java-client/pull/1828)
+  - Skip GH Actions build on changes in docs. [#1829](https://github.com/appium/java-client/pull/1829)
+  - Remove Checkstyle exclusion of removed Selenium package. [#1831](https://github.com/appium/java-client/pull/1831)
+  - Enable Checkstyle checks for test code. [#1843](https://github.com/appium/java-client/pull/1843)
+  - Configure `CODEOWNERS` to automate review requests. [#1846](https://github.com/appium/java-client/pull/1846)
+  - Enable execution of unit tests in CI. [#1845](https://github.com/appium/java-client/pull/1845)
+  - Add Simple SLF4J binding to unit tests runtime. [#1848](https://github.com/appium/java-client/pull/1848)
+  - Improve performance of proxy `Interceptor` logging. [#1849](https://github.com/appium/java-client/pull/1849)
+  - Make unit tests execution a part of Gradle build lifecycle. [#1853](https://github.com/appium/java-client/pull/1853)
+  - Replace non-W3C API calls with corresponding extension calls in app management. [#1883](https://github.com/appium/java-client/pull/1883)
+  - Switch the time getter to use mobile extensions. [#1884](https://github.com/appium/java-client/pull/1884)
+  - Switch file management APIs to use mobile: extensions. [#1886](https://github.com/appium/java-client/pull/1886)
+  - Use mobile extensions for app strings getters and keyboard commands. [#1890](https://github.com/appium/java-client/pull/1890)
+  - Finish replacing iOS extensions with their mobile alternatives. [#1892](https://github.com/appium/java-client/pull/1892)
+  - Change some Android APIs to use mobile extensions. [#1893](https://github.com/appium/java-client/pull/1893)
+  - Change backgroundApp command to use the corresponding mobile extension. [#1896](https://github.com/appium/java-client/pull/1896)
+  - Switch more Android helpers to use extensions. [#1898](https://github.com/appium/java-client/pull/1898)
+  - Perform xcuitest driver prebuild. [#1900](https://github.com/appium/java-client/pull/1900)
+  - Finish migrating Android helpers to mobile extensions. [#1901](https://github.com/appium/java-client/pull/1901)
+  - Avoid sending unnecessary requests if corresponding extensions are absent. [#1903](https://github.com/appium/java-client/pull/1903)
+- **[DOCUMENTATION]**
+  - Describe transitive Selenium dependencies management. [#1827](https://github.com/appium/java-client/pull/1827)
+  - Fix build badge to point GH Actions CI. [#1844](https://github.com/appium/java-client/pull/1844)
+- **[DEPENDENCY UPDATES]**
+  - `org.seleniumhq.selenium:selenium-java` was updated to 4.8.2.
+  - `org.slf4j:slf4j-api` was updated to 2.0.7.
+  - `org.owasp.dependencycheck` was updated to 8.2.1.
+  - `gradle` was updated to 8.1.0.
+  - `com.google.code.gson:gson` was updated to 2.10.1.
+  - `io.github.bonigarcia:webdrivermanager` was updated to 5.3.2.
+  - `org.junit.jupiter:junit-jupiter` was updated to 5.9.2.
+  - `checkstyle` was updated to 10.0.
+  - `jacoco` was updated to 0.8.8.
+  - `org.projectlombok:lombok` was updated to 1.18.26.
+  - `com.github.johnrengelman.shadow` was updated to 8.1.1.
+
 *8.3.0*
 - **[DOCUMENTATION]**
   - Added troubleshooting section. [#1808](https://github.com/appium/java-client/pull/1808)

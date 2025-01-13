@@ -16,48 +16,50 @@
 
 package io.appium.java_client;
 
-import org.apache.commons.io.FileUtils;
+import org.openqa.selenium.UnsupportedCommandException;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Base64;
+import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static io.appium.java_client.MobileCommand.pushFileCommand;
 
-public interface PushesFiles extends ExecutesMethod {
+public interface PushesFiles extends ExecutesMethod, CanRememberExtensionPresence {
 
     /**
-     * Saves base64 encoded data as a media file on the remote system.
+     * Saves base64-encoded data as a file on the remote system.
      *
-     * @param remotePath Path to file to write data to on remote device
-     *                   Only the filename part matters there on Simulator, so the remote end
-     *                   can figure out which type of media data it is and save
-     *                   it into a proper folder on the target device. Check
-     *                   'xcrun simctl addmedia' output to get more details on
-     *                   supported media types.
-     *                   If the path starts with <em>@applicationId/</em> prefix, then the file
-     *                   will be pushed to the root of the corresponding application container.
+     * @param remotePath Path to file to write data to on remote device.
+     *                   Check the documentation on `mobile: pushFile`
+     *                   extension for more details on possible values
+     *                   for different platforms.
      * @param base64Data Base64 encoded byte array of media file data to write to remote device
      */
     default void pushFile(String remotePath, byte[] base64Data) {
-        CommandExecutionHelper.execute(this, pushFileCommand(remotePath, base64Data));
+        final String extName = "mobile: pushFile";
+        try {
+            CommandExecutionHelper.executeScript(assertExtensionExists(extName), extName, Map.of(
+                    "remotePath", remotePath,
+                    "payload", new String(base64Data, StandardCharsets.UTF_8)
+            ));
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            CommandExecutionHelper.execute(markExtensionAbsence(extName), pushFileCommand(remotePath, base64Data));
+        }
     }
 
     /**
-     * Saves base64 encoded data as a media file on the remote system.
+     * Sends the file to the remote device.
      *
      * @param remotePath See the documentation on {@link #pushFile(String, byte[])}
      * @param file Is an existing local file to be written to the remote device
-     * @throws IOException when there are problems with a file or current file system
+     * @throws IOException when there are problems with a file on current file system
      */
     default void pushFile(String remotePath, File file) throws IOException {
-        checkNotNull(file, "A reference to file should not be NULL");
-        if (!file.exists()) {
-            throw new IOException(String.format("The given file %s doesn't exist",
-                    file.getAbsolutePath()));
-        }
-        pushFile(remotePath, Base64.getEncoder().encode(FileUtils.readFileToByteArray(file)));
+        pushFile(remotePath, Base64.getEncoder().encode(Files.readAllBytes(file.toPath())));
     }
 
 }

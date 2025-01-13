@@ -175,18 +175,13 @@ public class DefaultElementByBuilder extends AppiumByBuilder {
                     getBys(iOSXCUITFindBy.class, iOSXCUITFindBys.class, iOSXCUITFindAll.class));
         }
 
-        if (isWindows()) {
-            return buildMobileBy(howToUseLocatorsOptional.map(HowToUseLocators::windowsAutomation).orElse(null),
-                    getBys(WindowsFindBy.class, WindowsFindBys.class, WindowsFindAll.class));
-        }
-
         return null;
     }
 
     @Override
     public boolean isLookupCached() {
         AnnotatedElement annotatedElement = annotatedElementContainer.getAnnotated();
-        return (annotatedElement.getAnnotation(CacheLookup.class) != null);
+        return annotatedElement.getAnnotation(CacheLookup.class) != null;
     }
 
     private By returnMappedBy(By byDefault, By nativeAppBy) {
@@ -206,15 +201,13 @@ public class DefaultElementByBuilder extends AppiumByBuilder {
         String idOrName = ((Field) annotatedElementContainer.getAnnotated()).getName();
 
         if (defaultBy == null && mobileNativeBy == null) {
-            defaultBy =
-                    new ByIdOrName(((Field) annotatedElementContainer.getAnnotated()).getName());
+            defaultBy = new ByIdOrName(((Field) annotatedElementContainer.getAnnotated()).getName());
             mobileNativeBy = new By.ById(idOrName);
             return returnMappedBy(defaultBy, mobileNativeBy);
         }
 
         if (defaultBy == null) {
-            defaultBy =
-                    new ByIdOrName(((Field) annotatedElementContainer.getAnnotated()).getName());
+            defaultBy = new ByIdOrName(((Field) annotatedElementContainer.getAnnotated()).getName());
             return returnMappedBy(defaultBy, mobileNativeBy);
         }
 

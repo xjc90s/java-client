@@ -16,12 +16,9 @@
 
 package io.appium.java_client.service.local;
 
-import com.google.common.annotations.VisibleForTesting;
-import io.appium.java_client.internal.ReflectionHelpers;
+import lombok.Getter;
 import lombok.SneakyThrows;
-import org.apache.commons.lang3.StringUtils;
-import org.openqa.selenium.net.UrlChecker;
-import org.openqa.selenium.os.CommandLine;
+import org.openqa.selenium.os.ExternalProcess;
 import org.openqa.selenium.remote.service.DriverService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,21 +29,23 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static io.appium.java_client.service.local.AppiumServiceBuilder.BROADCAST_IP_ADDRESS;
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static io.appium.java_client.service.local.AppiumServiceBuilder.BROADCAST_IP4_ADDRESS;
+import static io.appium.java_client.service.local.AppiumServiceBuilder.BROADCAST_IP6_ADDRESS;
+import static java.util.Objects.requireNonNull;
+import static java.util.Optional.ofNullable;
 import static org.slf4j.event.Level.DEBUG;
 import static org.slf4j.event.Level.INFO;
 
@@ -54,10 +53,10 @@ public final class AppiumDriverLocalService extends DriverService {
 
     private static final String URL_MASK = "http://%s:%d/";
     private static final Logger LOG = LoggerFactory.getLogger(AppiumDriverLocalService.class);
-    private static final Pattern LOG_MESSAGE_PATTERN = Pattern.compile("^(.*)\\R");
     private static final Pattern LOGGER_CONTEXT_PATTERN = Pattern.compile("^(\\[debug\\] )?\\[(.+?)\\]");
     private static final String APPIUM_SERVICE_SLF4J_LOGGER_PREFIX = "appium.service";
     private static final Duration DESTROY_TIMEOUT = Duration.ofSeconds(60);
+    private static final Duration IS_RUNNING_PING_TIMEOUT = Duration.ofMillis(1500);
 
     private final File nodeJSExec;
     private final List<String> nodeJSArgs;
@@ -65,10 +64,12 @@ public final class AppiumDriverLocalService extends DriverService {
     private final Duration startupTimeout;
     private final ReentrantLock lock = new ReentrantLock(true); //uses "fair" thread ordering policy
     private final ListOutputStream stream = new ListOutputStream().add(System.out);
+    private final AppiumServerAvailabilityChecker availabilityChecker = new AppiumServerAvailabilityChecker();
     private final URL url;
+    @Getter
     private String basePath;
 
-    private CommandLine process = null;
+    private ExternalProcess process = null;
 
     AppiumDriverLocalService(String ipAddress, File nodeJSExec,
                              int nodeJSPort, Duration startupTimeout,
@@ -95,10 +96,6 @@ public final class AppiumDriverLocalService extends DriverService {
         return this;
     }
 
-    public String getBasePath() {
-        return this.basePath;
-    }
-
     @SneakyThrows
     private static URL addSuffix(URL url, String suffix) {
         return url.toURI().resolve("." + (suffix.startsWith("/") ? suffix : "/" + suffix)).toURL();
@@ -107,7 +104,7 @@ public final class AppiumDriverLocalService extends DriverService {
     @SneakyThrows
     @SuppressWarnings("SameParameterValue")
     private static URL replaceHost(URL source, String oldHost, String newHost) {
-        return new URL(source.toString().replace(oldHost, newHost));
+        return new URL(source.toString().replaceFirst(oldHost, newHost));
     }
 
     /**
@@ -124,40 +121,48 @@ public final class AppiumDriverLocalService extends DriverService {
     public boolean isRunning() {
         lock.lock();
         try {
-            if (process == null) {
-                return false;
-            }
-
-            if (!process.isRunning()) {
+            if (process == null || !process.isAlive()) {
                 return false;
             }
 
             try {
-                ping(Duration.ofMillis(1500));
-                return true;
-            } catch (UrlChecker.TimeoutException e) {
+                return ping(IS_RUNNING_PING_TIMEOUT);
+            } catch (AppiumServerAvailabilityChecker.ConnectionTimeout
+                     | AppiumServerAvailabilityChecker.ConnectionError e) {
                 return false;
-            } catch (MalformedURLException e) {
-                throw new AppiumServerHasNotBeenStartedLocallyException(e.getMessage(), e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         } finally {
             lock.unlock();
         }
-
     }
 
-    private void ping(Duration timeout) throws UrlChecker.TimeoutException, MalformedURLException {
-        // The operating system might block direct access to the universal broadcast IP address
-        URL status = addSuffix(replaceHost(getUrl(), BROADCAST_IP_ADDRESS, "127.0.0.1"), "/status");
-        new UrlChecker().waitUntilAvailable(timeout.toMillis(), TimeUnit.MILLISECONDS, status);
+    private boolean ping(Duration timeout) throws InterruptedException {
+        var baseURL = fixBroadcastAddresses(getUrl());
+        var statusUrl = addSuffix(baseURL, "/status");
+        return availabilityChecker.waitUntilAvailable(statusUrl, timeout);
+    }
+
+    private URL fixBroadcastAddresses(URL url) {
+        var host = url.getHost();
+        // The operating system will block direct access to the universal broadcast IP address
+        if (host.equals(BROADCAST_IP4_ADDRESS)) {
+            return replaceHost(url, BROADCAST_IP4_ADDRESS, "127.0.0.1");
+        }
+        if (host.equals(BROADCAST_IP6_ADDRESS)) {
+            return replaceHost(url, BROADCAST_IP6_ADDRESS, "::1");
+        }
+        return url;
     }
 
     /**
      * Starts the defined appium server.
      *
-     * @throws AppiumServerHasNotBeenStartedLocallyException If an error occurs while spawning the child process.
+     * @throws AppiumServerHasNotBeenStartedLocallyException If an error occurs on Appium server startup.
      * @see #stop()
      */
+    @Override
     public void start() throws AppiumServerHasNotBeenStartedLocallyException {
         lock.lock();
         try {
@@ -166,29 +171,73 @@ public final class AppiumDriverLocalService extends DriverService {
             }
 
             try {
-                process = new CommandLine(this.nodeJSExec.getCanonicalPath(),
-                        nodeJSArgs.toArray(new String[]{}));
-                process.setEnvironmentVariables(nodeJSEnvironment);
-                process.copyOutputTo(stream);
-                process.executeAsync();
-                ping(startupTimeout);
-            } catch (Throwable e) {
-                destroyProcess();
-                String msgTxt = "The local appium server has not been started. "
-                        + "The given Node.js executable: " + this.nodeJSExec.getAbsolutePath()
-                        + " Arguments: " + nodeJSArgs.toString() + " " + "\n";
-                if (process != null) {
-                    String processStream = process.getStdOut();
-                    if (!StringUtils.isBlank(processStream)) {
-                        msgTxt = msgTxt + "Process output: " + processStream + "\n";
-                    }
-                }
+                var processBuilder = ExternalProcess.builder()
+                        .command(this.nodeJSExec.getCanonicalPath(), nodeJSArgs)
+                        .copyOutputTo(stream);
+                nodeJSEnvironment.forEach(processBuilder::environment);
+                process = processBuilder.start();
+            } catch (IOException e) {
+                throw new AppiumServerHasNotBeenStartedLocallyException(e);
+            }
 
-                throw new AppiumServerHasNotBeenStartedLocallyException(msgTxt, e);
+            var didPingSucceed = false;
+            try {
+                ping(startupTimeout);
+                didPingSucceed = true;
+            } catch (AppiumServerAvailabilityChecker.ConnectionTimeout
+                     | AppiumServerAvailabilityChecker.ConnectionError e) {
+                var errorLines = new ArrayList<>(generateDetailedErrorMessagePrefix(e));
+                errorLines.addAll(retrieveServerDebugInfo());
+                throw new AppiumServerHasNotBeenStartedLocallyException(
+                        String.join("\n", errorLines), e
+                );
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } finally {
+                if (!didPingSucceed) {
+                    destroyProcess();
+                }
             }
         } finally {
             lock.unlock();
         }
+    }
+
+    private List<String> generateDetailedErrorMessagePrefix(RuntimeException e) {
+        var errorLines = new ArrayList<String>();
+        if (e instanceof AppiumServerAvailabilityChecker.ConnectionTimeout) {
+            errorLines.add(String.format(
+                    "Appium HTTP server is not listening at %s after %s ms timeout. "
+                            + "Consider increasing the server startup timeout value and "
+                            + "check the server log for possible error messages occurrences.", getUrl(),
+                    ((AppiumServerAvailabilityChecker.ConnectionTimeout) e).getTimeout().toMillis()
+            ));
+        } else if (e instanceof AppiumServerAvailabilityChecker.ConnectionError) {
+            var connectionError = (AppiumServerAvailabilityChecker.ConnectionError) e;
+            var statusCode = connectionError.getResponseCode();
+            var statusUrl = connectionError.getStatusUrl();
+            var payload = connectionError.getPayload();
+            errorLines.add(String.format(
+                    "Appium HTTP server has started and is listening although we were "
+                            + "unable to get an OK response from %s. Make sure both the client "
+                            + "and the server use the same base path '%s' and check the server log for possible "
+                            + "error messages occurrences.", statusUrl, Optional.ofNullable(basePath).orElse("/")
+            ));
+            errorLines.add(String.format("Response status code: %s", statusCode));
+            payload.ifPresent(p -> errorLines.add(String.format("Response payload: %s", p)));
+        }
+        return errorLines;
+    }
+
+    private List<String> retrieveServerDebugInfo() {
+        var result = new ArrayList<String>();
+        result.add(String.format("Node.js executable path: %s", nodeJSExec.getAbsolutePath()));
+        result.add(String.format("Arguments: %s", nodeJSArgs));
+        ofNullable(process)
+                .map(ExternalProcess::getOutput)
+                .filter(o -> !isNullOrEmpty(o))
+                .ifPresent(o -> result.add(String.format("Server log: %s", o)));
+        return result;
     }
 
     /**
@@ -211,46 +260,15 @@ public final class AppiumDriverLocalService extends DriverService {
     }
 
     /**
-     * Destroys the service if it is running.
-     *
-     * @param timeout The maximum time to wait before the process will be force-killed.
-     * @return The exit code of the process or zero if the process was not running.
-     */
-    private int destroyProcess(Duration timeout) {
-        if (!process.isRunning()) {
-            return 0;
-        }
-
-        // This all magic is necessary, because Selenium does not publicly expose
-        // process killing timeouts. By default a process is killed forcibly if
-        // it does not exit after two seconds, which is in most cases not enough for
-        // Appium
-        try {
-            Object osProcess = ReflectionHelpers.getPrivateFieldValue(
-                    process.getClass(), process, "process", Object.class
-            );
-            Object watchdog = ReflectionHelpers.getPrivateFieldValue(
-                    osProcess.getClass(), osProcess, "executeWatchdog", Object.class
-            );
-            Process nativeProcess = ReflectionHelpers.getPrivateFieldValue(
-                    watchdog.getClass(), watchdog, "process", Process.class
-            );
-            nativeProcess.destroy();
-            nativeProcess.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            LOG.warn("No explicit timeout could be applied to the process termination", e);
-        }
-
-        return process.destroy();
-    }
-
-    /**
      * Destroys the service.
-     * This methods waits up to `DESTROY_TIMEOUT` seconds for the Appium service
+     * This method waits up to `DESTROY_TIMEOUT` seconds for the Appium service
      * to exit gracefully.
      */
     private void destroyProcess() {
-        destroyProcess(DESTROY_TIMEOUT);
+        if (process == null || !process.isAlive()) {
+            return;
+        }
+        process.shutdown(DESTROY_TIMEOUT);
     }
 
     /**
@@ -260,11 +278,7 @@ public final class AppiumDriverLocalService extends DriverService {
      */
     @Nullable
     public String getStdOut() {
-        if (process != null) {
-            return process.getStdOut();
-        }
-
-        return null;
+        return ofNullable(process).map(ExternalProcess::getOutput).orElse(null);
     }
 
     /**
@@ -274,7 +288,7 @@ public final class AppiumDriverLocalService extends DriverService {
      *                     that is ready to accept server output
      */
     public void addOutPutStream(OutputStream outputStream) {
-        checkNotNull(outputStream, "outputStream parameter is NULL!");
+        requireNonNull(outputStream, "outputStream parameter is NULL!");
         stream.add(outputStream);
     }
 
@@ -285,9 +299,9 @@ public final class AppiumDriverLocalService extends DriverService {
      *                      that are ready to accept server output
      */
     public void addOutPutStreams(List<OutputStream> outputStreams) {
-        checkNotNull(outputStreams, "outputStreams parameter is NULL!");
-        for (OutputStream stream : outputStreams) {
-            addOutPutStream(stream);
+        requireNonNull(outputStreams, "outputStreams parameter is NULL!");
+        for (OutputStream outputStream : outputStreams) {
+            addOutPutStream(outputStream);
         }
     }
 
@@ -297,7 +311,7 @@ public final class AppiumDriverLocalService extends DriverService {
      * @return the outputStream has been removed if it is present
      */
     public Optional<OutputStream> removeOutPutStream(OutputStream outputStream) {
-        checkNotNull(outputStream, "outputStream parameter is NULL!");
+        requireNonNull(outputStream, "outputStream parameter is NULL!");
         return stream.remove(outputStream);
     }
 
@@ -382,14 +396,13 @@ public final class AppiumDriverLocalService extends DriverService {
      *                                available.
      */
     public void addSlf4jLogMessageConsumer(BiConsumer<String, Slf4jLogMessageContext> slf4jLogMessageConsumer) {
-        checkNotNull(slf4jLogMessageConsumer, "slf4jLogMessageConsumer parameter is NULL!");
+        requireNonNull(slf4jLogMessageConsumer, "slf4jLogMessageConsumer parameter is NULL!");
         addLogMessageConsumer(logMessage -> {
             slf4jLogMessageConsumer.accept(logMessage, parseSlf4jContextFromLogMessage(logMessage));
         });
     }
 
-    @VisibleForTesting
-    static Slf4jLogMessageContext parseSlf4jContextFromLogMessage(String logMessage) {
+    private static Slf4jLogMessageContext parseSlf4jContextFromLogMessage(String logMessage) {
         Matcher m = LOGGER_CONTEXT_PATTERN.matcher(logMessage);
         String loggerName = APPIUM_SERVICE_SLF4J_LOGGER_PREFIX;
         Level level = INFO;
@@ -416,7 +429,7 @@ public final class AppiumDriverLocalService extends DriverService {
      * @param consumer Consumer block to be executed when a log message is available.
      */
     public void addLogMessageConsumer(Consumer<String> consumer) {
-        checkNotNull(consumer, "consumer parameter is NULL!");
+        requireNonNull(consumer, "consumer parameter is NULL!");
         addOutPutStream(new OutputStream() {
             private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 

@@ -42,7 +42,7 @@ public interface SupportsCustomSslCertOption<T extends BaseOptions<T>> extends
      *
      * @return Certificate content.
      */
-    default Optional<String> setCustomSSLCert() {
+    default Optional<String> getCustomSSLCert() {
         return Optional.ofNullable((String) getCapability(CUSTOM_SSLCERT_OPTION));
     }
 }

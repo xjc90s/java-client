@@ -44,6 +44,9 @@ public @interface WithTimeout {
     ChronoUnit chronoUnit();
 
     class DurationBuilder {
+        private DurationBuilder() {
+        }
+
         static Duration build(WithTimeout withTimeout) {
             return Duration.of(withTimeout.time(), withTimeout.chronoUnit());
         }

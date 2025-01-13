@@ -19,60 +19,70 @@ package io.appium.java_client.pagefactory;
 import io.appium.java_client.pagefactory.bys.ContentType;
 import io.appium.java_client.pagefactory.interceptors.InterceptorOfASingleElement;
 import io.appium.java_client.pagefactory.locator.CacheableLocator;
-import net.sf.cglib.proxy.MethodProxy;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.PageFactory;
 
+import javax.annotation.Nullable;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import static io.appium.java_client.pagefactory.ThrowableUtil.extractReadableException;
 import static io.appium.java_client.pagefactory.utils.WebDriverUnpackUtility.getCurrentContentType;
+import static java.util.Optional.ofNullable;
 
-class WidgetInterceptor extends InterceptorOfASingleElement {
+public class WidgetInterceptor extends InterceptorOfASingleElement {
 
     private final Map<ContentType, Constructor<? extends Widget>> instantiationMap;
     private final Map<ContentType, Widget> cachedInstances = new HashMap<>();
     private final Duration duration;
-    private WebElement cachedElement;
+    private WeakReference<WebElement> cachedElementReference;
 
-    WidgetInterceptor(CacheableLocator locator, WebDriver driver, WebElement cachedElement,
-        Map<ContentType, Constructor<? extends Widget>> instantiationMap,
-        Duration duration) {
-        super(locator, driver);
-        this.cachedElement = cachedElement;
+    /**
+     * Proxy interceptor class for widgets.
+     */
+    public WidgetInterceptor(
+            @Nullable
+            CacheableLocator locator,
+            WeakReference<WebDriver> driverReference,
+            @Nullable
+            WeakReference<WebElement> cachedElementReference,
+            Map<ContentType, Constructor<? extends Widget>> instantiationMap,
+            Duration duration
+    ) {
+        super(locator, driverReference);
+        this.cachedElementReference = cachedElementReference;
         this.instantiationMap = instantiationMap;
         this.duration = duration;
     }
 
-
-    @Override protected Object getObject(WebElement element, Method method, Object[] args)
-        throws Throwable {
+    @Override
+    protected Object getObject(WebElement element, Method method, Object[] args) throws Throwable {
         ContentType type = getCurrentContentType(element);
-        if (cachedElement == null
-            || (locator != null && !((CacheableLocator) locator)
-            .isLookUpCached())
-            || cachedInstances.size() == 0) {
-            cachedElement = element;
+        WebElement cachedElement = cachedElementReference == null ? null : cachedElementReference.get();
+        if (cachedElement == null || !cachedInstances.containsKey(type)
+            || locator != null && !((CacheableLocator) locator).isLookUpCached()
+        ) {
+            cachedElementReference = new WeakReference<>(element);
 
             Constructor<? extends Widget> constructor = instantiationMap.get(type);
             Class<? extends Widget> clazz = constructor.getDeclaringClass();
 
-            int modifiers = clazz.getModifiers();
-            if (Modifier.isAbstract(modifiers)) {
-                throw new InstantiationException(clazz.getName()
-                        + " is abstract so "
-                        + "it can't be instantiated");
+            if (Modifier.isAbstract(clazz.getModifiers())) {
+                throw new InstantiationException(
+                        String.format("%s is abstract so it cannot be instantiated", clazz.getName())
+                );
             }
 
-            Widget widget = constructor.newInstance(cachedElement);
+            Widget widget = constructor.newInstance(element);
             cachedInstances.put(type, widget);
-            PageFactory.initElements(new AppiumFieldDecorator(widget, duration), widget);
+            PageFactory.initElements(new AppiumFieldDecorator(new WeakReference<>(widget), duration), widget);
         }
         try {
             method.setAccessible(true);
@@ -82,11 +92,11 @@ class WidgetInterceptor extends InterceptorOfASingleElement {
         }
     }
 
-    public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy)
-        throws Throwable {
-        if (locator != null) {
-            return super.intercept(obj, method, args, proxy);
-        }
-        return getObject(cachedElement, method, args);
+    @Override
+    public Object call(Object obj, Method method, Object[] args, Callable<?> original) throws Throwable {
+        WebElement element = ofNullable(cachedElementReference).map(WeakReference::get).orElse(null);
+        return locator == null && element != null
+                ? getObject(element, method, args)
+                : super.call(obj, method, args, original);
     }
 }

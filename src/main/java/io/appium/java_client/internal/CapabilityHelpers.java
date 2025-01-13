@@ -29,6 +29,9 @@ import java.util.function.Function;
 public class CapabilityHelpers {
     public static final String APPIUM_PREFIX = "appium:";
 
+    private CapabilityHelpers() {
+    }
+
     /**
      * Helper that is used for capability values retrieval.
      * Supports both prefixed W3C and "classic" capability names.
@@ -159,8 +162,8 @@ public class CapabilityHelpers {
      * Converts generic capability value to a url.
      *
      * @param value The capability value.
-     * @throws IllegalArgumentException If the given value cannot be parsed to a valid url.
      * @return null is the passed value is null otherwise the converted value.
+     * @throws IllegalArgumentException If the given value cannot be parsed to a valid url.
      */
     @Nullable
     public static URL toUrl(Object value) {

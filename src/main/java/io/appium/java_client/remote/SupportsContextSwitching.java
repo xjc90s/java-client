@@ -16,21 +16,21 @@
 
 package io.appium.java_client.remote;
 
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.ExecutesMethod;
+import io.appium.java_client.MobileCommand;
 import io.appium.java_client.NoSuchContextException;
 import org.openqa.selenium.ContextAware;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
-import org.openqa.selenium.remote.DriverCommand;
 import org.openqa.selenium.remote.Response;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public interface SupportsContextSwitching extends WebDriver, ContextAware, ExecutesMethod {
     /**
@@ -40,9 +40,9 @@ public interface SupportsContextSwitching extends WebDriver, ContextAware, Execu
      * @return self instance for chaining.
      */
     default WebDriver context(String name) {
-        checkNotNull(name, "Must supply a context name");
+        requireNonNull(name, "Must supply a context name");
         try {
-            execute(DriverCommand.SWITCH_TO_CONTEXT, ImmutableMap.of("name", name));
+            execute(MobileCommand.SWITCH_TO_CONTEXT, Map.of("name", name));
             return this;
         } catch (WebDriverException e) {
             throw new NoSuchContextException(e.getMessage(), e);
@@ -55,7 +55,7 @@ public interface SupportsContextSwitching extends WebDriver, ContextAware, Execu
      * @return List list of context names.
      */
     default Set<String> getContextHandles() {
-        Response response = execute(DriverCommand.GET_CONTEXT_HANDLES, ImmutableMap.of());
+        Response response = execute(MobileCommand.GET_CONTEXT_HANDLES, Map.of());
         Object value = response.getValue();
         try {
             //noinspection unchecked
@@ -75,7 +75,7 @@ public interface SupportsContextSwitching extends WebDriver, ContextAware, Execu
     @Nullable
     default String getContext() {
         String contextName =
-                String.valueOf(execute(DriverCommand.GET_CURRENT_CONTEXT_HANDLE).getValue());
+                String.valueOf(execute(MobileCommand.GET_CURRENT_CONTEXT_HANDLE).getValue());
         return "null".equalsIgnoreCase(contextName) ? null : contextName;
     }
 }

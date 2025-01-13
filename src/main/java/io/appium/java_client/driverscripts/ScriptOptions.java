@@ -16,11 +16,11 @@
 
 package io.appium.java_client.driverscripts;
 
-import com.google.common.collect.ImmutableMap;
-
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 
@@ -35,7 +35,7 @@ public class ScriptOptions {
      * @return self instance for chaining
      */
     public ScriptOptions withScriptType(ScriptType type) {
-        this.scriptType = checkNotNull(type);
+        this.scriptType = requireNonNull(type);
         return this;
     }
 
@@ -58,9 +58,9 @@ public class ScriptOptions {
      * @return The map containing the provided options
      */
     public Map<String, Object> build() {
-        final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        ofNullable(scriptType).map(x -> builder.put("type", x.name().toLowerCase()));
-        ofNullable(timeoutMs).map(x -> builder.put("timeout", x));
-        return builder.build();
+        var map = new HashMap<String, Object>();
+        ofNullable(scriptType).ifPresent(x -> map.put("type", x.name().toLowerCase()));
+        ofNullable(timeoutMs).ifPresent(x -> map.put("timeout", x));
+        return Collections.unmodifiableMap(map);
     }
 }

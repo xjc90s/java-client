@@ -21,99 +21,175 @@ import io.appium.java_client.imagecomparison.BaseComparisonOptions;
 import io.appium.java_client.imagecomparison.ComparisonMode;
 import io.appium.java_client.screenrecording.BaseStartScreenRecordingOptions;
 import io.appium.java_client.screenrecording.BaseStopScreenRecordingOptions;
-import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.remote.CommandInfo;
 import org.openqa.selenium.remote.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.AbstractMap;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 /**
  * The repository of mobile commands defined in the Mobile JSON
  * wire protocol.
+ * Most of these commands are platform-specific obsolete things and should eventually be replaced with
+ * calls to corresponding `mobile:` extensions, so we don't abuse non-w3c APIs
  */
+@SuppressWarnings({"checkstyle:HideUtilityClassConstructor", "checkstyle:ConstantName"})
 public class MobileCommand {
     //General
+    @Deprecated
     protected static final String RESET;
+    @Deprecated
     protected static final String GET_STRINGS;
+    @Deprecated
     public static final String SET_VALUE;
+    @Deprecated
     protected static final String PULL_FILE;
+    @Deprecated
     protected static final String PULL_FOLDER;
+    @Deprecated
     public static final String RUN_APP_IN_BACKGROUND;
+    @Deprecated
     protected static final String PERFORM_TOUCH_ACTION;
+    @Deprecated
     protected static final String PERFORM_MULTI_TOUCH;
+    @Deprecated
     public static final String LAUNCH_APP;
+    @Deprecated
     public static final String CLOSE_APP;
+    @Deprecated
     protected static final String GET_DEVICE_TIME;
+    @Deprecated
     protected static final String GET_SESSION;
     protected static final String LOG_EVENT;
     protected static final String GET_EVENTS;
 
     //region Applications Management
+    @Deprecated
     protected static final String IS_APP_INSTALLED;
+    @Deprecated
     protected static final String INSTALL_APP;
+    @Deprecated
     protected static final String ACTIVATE_APP;
+    @Deprecated
     protected static final String QUERY_APP_STATE;
+    @Deprecated
     protected static final String TERMINATE_APP;
+    @Deprecated
     protected static final String REMOVE_APP;
     //endregion
 
     //region Clipboard
+    @Deprecated
     public static final String GET_CLIPBOARD;
+    @Deprecated
     public static final String SET_CLIPBOARD;
     //endregion
 
+    @Deprecated
     protected static final String GET_PERFORMANCE_DATA;
+    @Deprecated
     protected static final String GET_SUPPORTED_PERFORMANCE_DATA_TYPES;
 
+    @Deprecated
     public static final String START_RECORDING_SCREEN;
+    @Deprecated
     public static final String STOP_RECORDING_SCREEN;
 
+    @Deprecated
     protected static final String HIDE_KEYBOARD;
+    @Deprecated
     protected static final String LOCK;
     //iOS
+    @Deprecated
     protected static final String SHAKE;
+    @Deprecated
     protected static final String TOUCH_ID;
+    @Deprecated
     protected static final String TOUCH_ID_ENROLLMENT;
     //Android
-    protected static final String CURRENT_ACTIVITY;
+    @Deprecated
+    public static final String CURRENT_ACTIVITY;
+    @Deprecated
     protected static final String END_TEST_COVERAGE;
+    @Deprecated
     protected static final String GET_DISPLAY_DENSITY;
+    @Deprecated
     protected static final String GET_NETWORK_CONNECTION;
+    @Deprecated
     protected static final String GET_SYSTEM_BARS;
+    @Deprecated
     protected static final String IS_KEYBOARD_SHOWN;
+    @Deprecated
     protected static final String IS_LOCKED;
+    @Deprecated
     public static final String LONG_PRESS_KEY_CODE;
+    @Deprecated
     protected static final String FINGER_PRINT;
+    @Deprecated
     protected static final String OPEN_NOTIFICATIONS;
+    @Deprecated
     public static final String PRESS_KEY_CODE;
+    @Deprecated
     protected static final String PUSH_FILE;
+    @Deprecated
     protected static final String SET_NETWORK_CONNECTION;
+    @Deprecated
     protected static final String START_ACTIVITY;
+    @Deprecated
     protected static final String TOGGLE_LOCATION_SERVICES;
+    @Deprecated
     protected static final String UNLOCK;
+    @Deprecated
     public static final String REPLACE_VALUE;
     protected static final String GET_SETTINGS;
+    @Deprecated
     protected static final String SET_SETTINGS;
-    protected static final String GET_CURRENT_PACKAGE;
-    protected static final String SEND_SMS;
-    protected static final String GSM_CALL;
-    protected static final String GSM_SIGNAL;
-    protected static final String GSM_VOICE;
-    protected static final String NETWORK_SPEED;
-    protected static final String POWER_CAPACITY;
-    protected static final String POWER_AC_STATE;
+    @Deprecated
+    public static final String GET_CURRENT_PACKAGE;
+    @Deprecated
+    public static final String SEND_SMS;
+    @Deprecated
+    public static final String GSM_CALL;
+    @Deprecated
+    public static final String GSM_SIGNAL;
+    @Deprecated
+    public static final String GSM_VOICE;
+    @Deprecated
+    public static final String NETWORK_SPEED;
+    @Deprecated
+    public static final String POWER_CAPACITY;
+    @Deprecated
+    public static final String POWER_AC_STATE;
+    @Deprecated
     protected static final String TOGGLE_WIFI;
+    @Deprecated
     protected static final String TOGGLE_AIRPLANE_MODE;
+    @Deprecated
     protected static final String TOGGLE_DATA;
     protected static final String COMPARE_IMAGES;
     protected static final String EXECUTE_DRIVER_SCRIPT;
+    @Deprecated
     protected static final String GET_ALLSESSION;
     protected static final String EXECUTE_GOOGLE_CDP_COMMAND;
+
+    public static final String GET_SCREEN_ORIENTATION = "getScreenOrientation";
+    public static final String SET_SCREEN_ORIENTATION = "setScreenOrientation";
+    public static final String GET_SCREEN_ROTATION = "getScreenRotation";
+    public static final String SET_SCREEN_ROTATION = "setScreenRotation";
+
+    public static final String GET_CONTEXT_HANDLES = "getContextHandles";
+    public static final String GET_CURRENT_CONTEXT_HANDLE = "getCurrentContextHandle";
+    public static final String SWITCH_TO_CONTEXT = "switchToContext";
+
+    public static final String GET_LOCATION = "getLocation";
+    public static final String SET_LOCATION = "setLocation";
 
     public static final Map<String, CommandInfo> commandRepository;
 
@@ -284,6 +360,18 @@ public class MobileCommand {
         commandRepository.put(EXECUTE_DRIVER_SCRIPT, postC("/session/:sessionId/appium/execute_driver"));
         commandRepository.put(GET_ALLSESSION, getC("/sessions"));
         commandRepository.put(EXECUTE_GOOGLE_CDP_COMMAND, postC("/session/:sessionId/goog/cdp/execute"));
+
+        commandRepository.put(GET_SCREEN_ORIENTATION, getC("/session/:sessionId/orientation"));
+        commandRepository.put(SET_SCREEN_ORIENTATION, postC("/session/:sessionId/orientation"));
+        commandRepository.put(GET_SCREEN_ROTATION, getC("/session/:sessionId/rotation"));
+        commandRepository.put(SET_SCREEN_ROTATION, postC("/session/:sessionId/rotation"));
+
+        commandRepository.put(GET_CONTEXT_HANDLES, getC("/session/:sessionId/contexts"));
+        commandRepository.put(GET_CURRENT_CONTEXT_HANDLE, getC("/session/:sessionId/context"));
+        commandRepository.put(SWITCH_TO_CONTEXT, postC("/session/:sessionId/context"));
+
+        commandRepository.put(GET_LOCATION, getC("/session/:sessionId/location"));
+        commandRepository.put(SET_LOCATION, postC("/session/:sessionId/location"));
     }
 
     /**
@@ -317,35 +405,34 @@ public class MobileCommand {
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * keyboard hiding.
+     * This method forms a {@link Map} of parameters for the keyboard hiding.
      *
      * @param keyName The button pressed by the mobile driver to attempt hiding the
      *                keyboard.
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> hideKeyboardCommand(String keyName) {
-        return new AbstractMap.SimpleEntry<>(
-                HIDE_KEYBOARD, prepareArguments("keyName", keyName));
+        return Map.entry(HIDE_KEYBOARD, Map.of("keyName", keyName));
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * keyboard hiding.
+     * This method forms a {@link Map} of parameters for the keyboard hiding.
      *
      * @param strategy HideKeyboardStrategy.
      * @param keyName  a String, representing the text displayed on the button of the
      *                 keyboard you want to press. For example: "Done".
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> hideKeyboardCommand(String strategy,
                                                                         String keyName) {
-        String[] parameters = new String[]{"strategy", "key"};
-        Object[] values = new Object[]{strategy, keyName};
-        return new AbstractMap.SimpleEntry<>(
-                HIDE_KEYBOARD, prepareArguments(parameters, values));
+        return Map.entry(HIDE_KEYBOARD, Map.of(
+                "strategy", strategy,
+                "key", keyName
+        ));
     }
 
     /**
@@ -354,7 +441,9 @@ public class MobileCommand {
      * @param param is a parameter name.
      * @param value is the parameter value.
      * @return built {@link ImmutableMap}.
+     * @deprecated Use {@link Map#of(Object, Object)}
      */
+    @Deprecated
     public static ImmutableMap<String, Object> prepareArguments(String param,
                                                                 Object value) {
         ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -368,12 +457,14 @@ public class MobileCommand {
      * @param params is the array with parameter names.
      * @param values is the array with parameter values.
      * @return built {@link ImmutableMap}.
+     * @deprecated Use {@link Map#of(Object, Object, Object, Object)}
      */
+    @Deprecated
     public static ImmutableMap<String, Object> prepareArguments(String[] params,
                                                                 Object[] values) {
         ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
         for (int i = 0; i < params.length; i++) {
-            if (!StringUtils.isBlank(params[i]) && (values[i] != null)) {
+            if (!isNullOrEmpty(params[i]) && values[i] != null) {
                 builder.put(params[i], values[i]);
             }
         }
@@ -381,139 +472,135 @@ public class MobileCommand {
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * key event invocation.
+     * This method forms a {@link Map} of parameters for the key event invocation.
      *
      * @param key code for the key pressed on the device.
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> pressKeyCodeCommand(int key) {
-        return new AbstractMap.SimpleEntry<>(
-                PRESS_KEY_CODE, prepareArguments("keycode", key));
+        return Map.entry(PRESS_KEY_CODE, Map.of("keycode", key));
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * key event invocation.
+     * This method forms a {@link Map} of parameters for the key event invocation.
      *
      * @param key       code for the key pressed on the Android device.
      * @param metastate metastate for the keypress.
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> pressKeyCodeCommand(int key,
                                                                         Integer metastate) {
-        String[] parameters = new String[]{"keycode", "metastate"};
-        Object[] values = new Object[]{key, metastate};
-        return new AbstractMap.SimpleEntry<>(
-                PRESS_KEY_CODE, prepareArguments(parameters, values));
+        return Map.entry(PRESS_KEY_CODE, Map.of(
+                "keycode", key,
+                "metastate", metastate
+        ));
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * long key event invocation.
+     * This method forms a {@link Map} of parameters for the long key event invocation.
      *
      * @param key code for the long key pressed on the device.
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> longPressKeyCodeCommand(int key) {
-        return new AbstractMap.SimpleEntry<>(
-                LONG_PRESS_KEY_CODE, prepareArguments("keycode", key));
+        return Map.entry(LONG_PRESS_KEY_CODE, Map.of("keycode", key));
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * long key event invocation.
+     * This method forms a {@link Map} of parameters for the long key event invocation.
      *
      * @param key       code for the long key pressed on the Android device.
      * @param metastate metastate for the long key press.
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> longPressKeyCodeCommand(int key,
                                                                             Integer metastate) {
-        String[] parameters = new String[]{"keycode", "metastate"};
-        Object[] values = new Object[]{key, metastate};
-        return new AbstractMap.SimpleEntry<>(
-                LONG_PRESS_KEY_CODE, prepareArguments(parameters, values));
+        return Map.entry(LONG_PRESS_KEY_CODE, Map.of(
+                "keycode", key,
+                "metastate", metastate
+        ));
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * device locking.
+     * This method forms a {@link Map} of parameters for the device locking.
      *
      * @param duration for how long to lock the screen for. Minimum time resolution is one second
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> lockDeviceCommand(Duration duration) {
-        return new AbstractMap.SimpleEntry<>(
-                LOCK, prepareArguments("seconds", duration.getSeconds()));
+        return Map.entry(LOCK, Map.of("seconds", duration.getSeconds()));
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * device unlocking.
+     * This method forms a {@link Map} of parameters for the device unlocking.
      *
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> unlockDeviceCommand() {
-        return new AbstractMap.SimpleEntry<>(UNLOCK, ImmutableMap.of());
+        return Map.entry(UNLOCK, Map.of());
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * device locked query.
+     * This method forms a {@link Map} of parameters for the device locked query.
      *
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> getIsDeviceLockedCommand() {
-        return new AbstractMap.SimpleEntry<>(IS_LOCKED, ImmutableMap.of());
+        return Map.entry(IS_LOCKED, Map.of());
     }
 
     public static Map.Entry<String, Map<String, ?>> getSettingsCommand() {
-        return new AbstractMap.SimpleEntry<>(GET_SETTINGS, ImmutableMap.of());
+        return Map.entry(GET_SETTINGS, Map.of());
     }
 
     public static Map.Entry<String, Map<String, ?>> setSettingsCommand(String setting, Object value) {
-        return setSettingsCommand(prepareArguments(setting, value));
+        return setSettingsCommand(Map.of(setting, value));
     }
 
     public static Map.Entry<String, Map<String, ?>> setSettingsCommand(Map<String, Object> settings) {
-        return new AbstractMap.SimpleEntry<>(SET_SETTINGS, prepareArguments("settings", settings));
+        return Map.entry(SET_SETTINGS, Map.of("settings", settings));
     }
 
     /**
-     * This method forms a {@link java.util.Map} of parameters for the
-     * file pushing.
+     * This method forms a {@link Map} of parameters for the file pushing.
      *
      * @param remotePath Path to file to write data to on remote device
      * @param base64Data Base64 encoded byte array of data to write to remote device
-     * @return a key-value pair. The key is the command name. The value is a
-     * {@link java.util.Map} command arguments.
+     * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> pushFileCommand(String remotePath, byte[] base64Data) {
-        String[] parameters = new String[]{"path", "data"};
-        Object[] values = new Object[]{remotePath, new String(base64Data, StandardCharsets.UTF_8)};
-        return new AbstractMap.SimpleEntry<>(PUSH_FILE, prepareArguments(parameters, values));
+        return Map.entry(PUSH_FILE, Map.of(
+                "path", remotePath,
+                "data", new String(base64Data, StandardCharsets.UTF_8)
+        ));
     }
 
     public static Map.Entry<String, Map<String, ?>> startRecordingScreenCommand(BaseStartScreenRecordingOptions opts) {
-        return new AbstractMap.SimpleEntry<>(START_RECORDING_SCREEN,
-                prepareArguments("options", opts.build()));
+        return Map.entry(START_RECORDING_SCREEN, Map.of("options", opts.build()));
     }
 
     public static Map.Entry<String, Map<String, ?>> stopRecordingScreenCommand(BaseStopScreenRecordingOptions opts) {
-        return new AbstractMap.SimpleEntry<>(STOP_RECORDING_SCREEN,
-                prepareArguments("options", opts.build()));
+        return Map.entry(STOP_RECORDING_SCREEN, Map.of("options", opts.build()));
     }
 
     /**
-     * Forms a {@link java.util.Map} of parameters for images comparison.
+     * Forms a {@link Map} of parameters for images comparison.
      *
      * @param mode one of possible comparison modes
      * @param img1Data base64-encoded data of the first image
@@ -524,23 +611,22 @@ public class MobileCommand {
     public static Map.Entry<String, Map<String, ?>> compareImagesCommand(ComparisonMode mode,
                                                                          byte[] img1Data, byte[] img2Data,
                                                                          @Nullable BaseComparisonOptions options) {
-        String[] parameters = options == null
-                ? new String[]{"mode", "firstImage", "secondImage"}
-                : new String[]{"mode", "firstImage", "secondImage", "options"};
-        Object[] values = options == null
-                ? new Object[]{mode.toString(), new String(img1Data, StandardCharsets.UTF_8),
-                               new String(img2Data, StandardCharsets.UTF_8)}
-                : new Object[]{mode.toString(), new String(img1Data, StandardCharsets.UTF_8),
-                               new String(img2Data, StandardCharsets.UTF_8), options.build()};
-        return new AbstractMap.SimpleEntry<>(COMPARE_IMAGES, prepareArguments(parameters, values));
+        var args = new HashMap<String, Object>();
+        args.put("mode", mode.toString());
+        args.put("firstImage", new String(img1Data, StandardCharsets.UTF_8));
+        args.put("secondImage", new String(img2Data, StandardCharsets.UTF_8));
+        Optional.ofNullable(options).ifPresent(opts -> args.put("options", options.build()));
+        return Map.entry(COMPARE_IMAGES, Collections.unmodifiableMap(args));
     }
 
     /**
      * This method forms a {@link Map} of parameters for the checking of the keyboard state (is it shown or not).
      *
      * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated This helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> isKeyboardShownCommand() {
-        return new AbstractMap.SimpleEntry<>(IS_KEYBOARD_SHOWN, ImmutableMap.of());
+        return Map.entry(IS_KEYBOARD_SHOWN, Map.of());
     }
 }

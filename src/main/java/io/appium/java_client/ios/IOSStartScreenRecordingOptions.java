@@ -16,14 +16,15 @@
 
 package io.appium.java_client.ios;
 
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.screenrecording.BaseStartScreenRecordingOptions;
 import io.appium.java_client.screenrecording.ScreenRecordingUploadOptions;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 public class IOSStartScreenRecordingOptions
@@ -56,7 +57,7 @@ public class IOSStartScreenRecordingOptions
      * @return self instance for chaining.
      */
     public IOSStartScreenRecordingOptions withVideoType(String videoType) {
-        this.videoType = checkNotNull(videoType);
+        this.videoType = requireNonNull(videoType);
         return this;
     }
 
@@ -72,7 +73,7 @@ public class IOSStartScreenRecordingOptions
      * @return self instance for chaining.
      */
     public IOSStartScreenRecordingOptions withVideoQuality(VideoQuality videoQuality) {
-        this.videoQuality = checkNotNull(videoQuality).name().toLowerCase();
+        this.videoQuality = requireNonNull(videoQuality).name().toLowerCase();
         return this;
     }
 
@@ -98,7 +99,7 @@ public class IOSStartScreenRecordingOptions
      * @return self instance for chaining.
      */
     public IOSStartScreenRecordingOptions withVideoScale(String videoScale) {
-        this.videoScale = checkNotNull(videoScale);
+        this.videoScale = requireNonNull(videoScale);
         return this;
     }
 
@@ -133,13 +134,12 @@ public class IOSStartScreenRecordingOptions
 
     @Override
     public Map<String, Object> build() {
-        final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        builder.putAll(super.build());
-        ofNullable(videoType).map(x -> builder.put("videoType", x));
-        ofNullable(videoQuality).map(x -> builder.put("videoQuality", x));
-        ofNullable(videoScale).map(x -> builder.put("videoScale", x));
-        ofNullable(videoFilters).map(x -> builder.put("videoFilters", x));
-        ofNullable(fps).map(x -> builder.put("videoFps", x));
-        return builder.build();
+        var map = new HashMap<>(super.build());
+        ofNullable(videoType).map(x -> map.put("videoType", x));
+        ofNullable(videoQuality).map(x -> map.put("videoQuality", x));
+        ofNullable(videoScale).map(x -> map.put("videoScale", x));
+        ofNullable(videoFilters).map(x -> map.put("videoFilters", x));
+        ofNullable(fps).map(x -> map.put("videoFps", x));
+        return Collections.unmodifiableMap(map);
     }
 }

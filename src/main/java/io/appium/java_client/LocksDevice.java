@@ -16,13 +16,17 @@
 
 package io.appium.java_client;
 
+import org.openqa.selenium.UnsupportedCommandException;
+
 import java.time.Duration;
+import java.util.Map;
 
 import static io.appium.java_client.MobileCommand.getIsDeviceLockedCommand;
 import static io.appium.java_client.MobileCommand.lockDeviceCommand;
 import static io.appium.java_client.MobileCommand.unlockDeviceCommand;
+import static java.util.Objects.requireNonNull;
 
-public interface LocksDevice extends ExecutesMethod {
+public interface LocksDevice extends ExecutesMethod, CanRememberExtensionPresence {
 
     /**
      * This method locks a device. It will return silently if the device
@@ -41,7 +45,15 @@ public interface LocksDevice extends ExecutesMethod {
      *                 A negative/zero value will lock the device and return immediately.
      */
     default void lockDevice(Duration duration) {
-        CommandExecutionHelper.execute(this, lockDeviceCommand(duration));
+        final String extName = "mobile: lock";
+        try {
+            CommandExecutionHelper.executeScript(assertExtensionExists(extName), extName, Map.of(
+                    "seconds", duration.getSeconds()
+            ));
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            CommandExecutionHelper.execute(markExtensionAbsence(extName), lockDeviceCommand(duration));
+        }
     }
 
     /**
@@ -49,7 +61,17 @@ public interface LocksDevice extends ExecutesMethod {
      * is not locked.
      */
     default void unlockDevice() {
-        CommandExecutionHelper.execute(this, unlockDeviceCommand());
+        final String extName = "mobile: unlock";
+        try {
+            //noinspection ConstantConditions
+            if (!(Boolean) CommandExecutionHelper.executeScript(assertExtensionExists(extName), "mobile: isLocked")) {
+                return;
+            }
+            CommandExecutionHelper.executeScript(this, extName);
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            CommandExecutionHelper.execute(markExtensionAbsence(extName), unlockDeviceCommand());
+        }
     }
 
     /**
@@ -58,6 +80,16 @@ public interface LocksDevice extends ExecutesMethod {
      * @return true if the device is locked or false otherwise.
      */
     default boolean isDeviceLocked() {
-        return CommandExecutionHelper.execute(this, getIsDeviceLockedCommand());
+        final String extName = "mobile: isLocked";
+        try {
+            return requireNonNull(
+                    CommandExecutionHelper.executeScript(assertExtensionExists(extName), extName)
+            );
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            return requireNonNull(
+                    CommandExecutionHelper.execute(markExtensionAbsence(extName), getIsDeviceLockedCommand())
+            );
+        }
     }
 }

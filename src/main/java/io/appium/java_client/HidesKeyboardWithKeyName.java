@@ -16,31 +16,34 @@
 
 package io.appium.java_client;
 
+import org.openqa.selenium.UnsupportedCommandException;
+
+import java.util.List;
+import java.util.Map;
+
 import static io.appium.java_client.MobileCommand.hideKeyboardCommand;
 
 public interface HidesKeyboardWithKeyName extends HidesKeyboard {
 
     /**
      * Hides the keyboard by pressing the button specified by keyName if it is
-     * showing.
+     * showing. If the on-screen keyboard does not have any dedicated button that
+     * hides it then an error is going to be thrown. In such case you must emulate
+     * same actions an app user would do to hide the keyboard.
+     * See the documentation for 'mobile: hideKeyboard' extension for more details.
      *
      * @param keyName The button pressed by the mobile driver to attempt hiding the
      *                keyboard.
      */
     default void hideKeyboard(String keyName) {
-        CommandExecutionHelper.execute(this, hideKeyboardCommand(keyName));
-    }
-
-    /**
-     * Hides the keyboard if it is showing. Hiding the keyboard often
-     * depends on the way an app is implemented, no single strategy always
-     * works.
-     *
-     * @param strategy HideKeyboardStrategy.
-     * @param keyName  a String, representing the text displayed on the button of the
-     *                 keyboard you want to press. For example: "Done".
-     */
-    default void hideKeyboard(String strategy, String keyName) {
-        CommandExecutionHelper.execute(this, hideKeyboardCommand(strategy, keyName));
+        final String extName = "mobile: hideKeyboard";
+        try {
+            CommandExecutionHelper.executeScript(assertExtensionExists(extName), extName, Map.of(
+                "keys", List.of(keyName)
+            ));
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            CommandExecutionHelper.execute(markExtensionAbsence(extName), hideKeyboardCommand(keyName));
+        }
     }
 }

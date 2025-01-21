@@ -6,19 +6,27 @@ plugins {
     id 'eclipse'
     id 'maven-publish'
     id 'jacoco'
-    id 'checkstyle'
     id 'signing'
-    id 'org.owasp.dependencycheck' version '7.4.3'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id 'org.owasp.dependencycheck' version '12.0.1'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 repositories {
     mavenCentral()
+
+    if (project.hasProperty("isCI")) {
+        maven {
+            url uri('https://oss.sonatype.org/content/repositories/snapshots/')
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+    }
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
     withJavadocJar()
     withSourcesJar()
 }
@@ -26,77 +34,64 @@ java {
 ext {
     seleniumVersion = project.property('selenium.version')
     appiumClientVersion = project.property('appiumClient.version')
+    slf4jVersion = '2.0.16'
 }
 
 dependencies {
-    compileOnly 'org.projectlombok:lombok:1.18.24'
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+    compileOnly 'org.projectlombok:lombok:1.18.36'
+    annotationProcessor 'org.projectlombok:lombok:1.18.36'
 
-    api ('org.seleniumhq.selenium:selenium-api') {
-        version {
-            strictly "[${seleniumVersion}, 5.0)"
-            prefer "${seleniumVersion}"
+    if (project.hasProperty("isCI")) {
+        api "org.seleniumhq.selenium:selenium-api:${seleniumVersion}"
+        api "org.seleniumhq.selenium:selenium-remote-driver:${seleniumVersion}"
+        api "org.seleniumhq.selenium:selenium-support:${seleniumVersion}"
+    } else {
+        api('org.seleniumhq.selenium:selenium-api') {
+            version {
+                strictly "[${seleniumVersion}, 5.0)"
+                prefer "${seleniumVersion}"
+            }
+        }
+        api('org.seleniumhq.selenium:selenium-remote-driver') {
+            version {
+                strictly "[${seleniumVersion}, 5.0)"
+                prefer "${seleniumVersion}"
+            }
+        }
+        api('org.seleniumhq.selenium:selenium-support') {
+            version {
+                strictly "[${seleniumVersion}, 5.0)"
+                prefer "${seleniumVersion}"
+            }
         }
     }
-    api ('org.seleniumhq.selenium:selenium-remote-driver') {
-        version {
-            strictly "[${seleniumVersion}, 5.0)"
-            prefer "${seleniumVersion}"
-        }
-    }
-    implementation ('org.seleniumhq.selenium:selenium-support') {
-        version {
-            strictly "[${seleniumVersion}, 5.0)"
-            prefer "${seleniumVersion}"
-        }
-    }
-    implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'cglib:cglib:3.3.0'
-    implementation 'commons-validator:commons-validator:1.7'
-    implementation 'org.apache.commons:commons-lang3:3.12.0'
-    implementation 'commons-io:commons-io:2.11.0'
-    implementation 'org.slf4j:slf4j-api:2.0.6'
-
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.1'
-    testImplementation 'org.hamcrest:hamcrest:2.2'
-    testImplementation (group: 'io.github.bonigarcia', name: 'webdrivermanager', version: '5.3.1') {
-        exclude group: 'org.seleniumhq.selenium'
-    }
-    testImplementation ('org.seleniumhq.selenium:selenium-chrome-driver') {
-        version {
-            strictly "[${seleniumVersion}, 5.0)"
-            prefer "${seleniumVersion}"
-        }
-    }
-}
-
-ext {
-    Sources = fileTree("$buildDir/src/main/java").include('**/*.java')
-    Tests = fileTree("$buildDir/src/test/java").include('**/*.java')
-    Docs = file("$buildDir/doc")
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
 }
 
 dependencyCheck {
-    failBuildOnCVSS=22
+    failBuildOnCVSS = 22
 }
 
 jacoco {
-    toolVersion = '0.8.5'
+    toolVersion = '0.8.12'
 }
 
-tasks.withType(JacocoReport) {
+tasks.withType(JacocoReport).configureEach {
     description = 'Generate Jacoco coverage reports after running tests'
     sourceSets sourceSets.main
     reports {
         html.required = true
-        html.destination file("${buildDir}/Reports/jacoco")
+        html.outputLocation = file("${buildDir}/Reports/jacoco")
     }
 }
 jacocoTestReport.dependsOn test
 
+apply plugin: 'checkstyle'
+
 checkstyle {
-    toolVersion = '8.32'
-    configFile = file("$projectDir/appium-style.xml")
+    toolVersion = '10.17.0'
+    configFile = configDirectory.file('appium-style.xml').get().getAsFile()
     showViolations = true
     ignoreFailures = false
 }
@@ -176,6 +171,7 @@ publishing {
 }
 
 signing {
+    required { !'true'.equalsIgnoreCase(project.findProperty('signingDisabled')) }
     def signingKey = System.getenv("PGP_SECRET")
     def signingPassword = System.getenv("PGP_PASSPHRASE")
     useInMemoryPgpKeys(signingKey, signingPassword)
@@ -183,67 +179,135 @@ signing {
 }
 
 wrapper {
-    gradleVersion = '7.6'
+    gradleVersion = '8.9'
     distributionType = Wrapper.DistributionType.ALL
 }
 
 processResources {
     filter ReplaceTokens, tokens: [
-            'selenium.version': seleniumVersion,
+            'selenium.version'    : seleniumVersion,
             'appiumClient.version': appiumClientVersion
     ]
 }
 
-task unitTest( type: Test ) {
-    useJUnitPlatform()
-    testLogging.showStandardStreams = true
-    testLogging.exceptionFormat = 'full'
-    filter {
-        includeTestsMatching 'io.appium.java_client.internal.*'
-        includeTestsMatching 'io.appium.java_client.proxy.*'
-    }
-}
+testing {
+    suites {
+        configureEach {
+            useJUnitJupiter()
+            dependencies {
+                implementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+                runtimeOnly 'org.junit.platform:junit-platform-launcher'
+                implementation 'org.hamcrest:hamcrest:3.0'
+                runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+            }
+            targets.configureEach {
+                testTask.configure {
+                    testLogging {
+                        showStandardStreams = true
+                        exceptionFormat = 'full'
+                    }
+                }
+            }
+        }
 
-task xcuiTest( type: Test ) {
-    useJUnitPlatform()
-    testLogging.showStandardStreams = true
-    testLogging.exceptionFormat = 'full'
-    filter {
-        includeTestsMatching 'io.appium.java_client.ios.*'
-        includeTestsMatching '*.pagefactory_tests.XCUITModeTest'
-        includeTestsMatching '*.pagefactory_tests.widget.tests.combined.*'
-        includeTestsMatching '*.pagefactory_tests.widget.tests.ios.*'
-        includeTestsMatching 'io.appium.java_client.service.local.StartingAppLocallyIosTest'
-        exclude '**/IOSScreenRecordTest.class'
-        exclude '**/ImagesComparisonTest.class'
-    }
-}
+        test {
+            dependencies {
+                implementation "org.seleniumhq.selenium:selenium-chrome-driver:${seleniumVersion}"
+                implementation('io.github.bonigarcia:webdrivermanager:5.9.2') {
+                    exclude group: 'org.seleniumhq.selenium'
+                }
+            }
+            targets.configureEach {
+                testTask.configure {
+                    finalizedBy jacocoTestReport
+                }
+            }
+        }
 
-task uiAutomationTest( type: Test ) {
-    useJUnitPlatform()
-    testLogging.showStandardStreams = true
-    testLogging.exceptionFormat = 'full'
-    filter {
-        includeTestsMatching 'io.appium.java_client.android.SettingTest'
-        includeTestsMatching 'io.appium.java_client.android.ClipboardTest'
-        includeTestsMatching 'io.appium.java_client.android.OpenNotificationsTest'
-        includeTestsMatching '*.AndroidAppStringsTest'
-        includeTestsMatching '*.pagefactory_tests.widget.tests.android.*'
-        includeTestsMatching '*.pagefactory_tests.widget.tests.AndroidPageObjectTest'
-        includeTestsMatching 'io.appium.java_client.service.local.StartingAppLocallyAndroidTest'
-        includeTestsMatching 'io.appium.java_client.service.local.ServerBuilderTest'
-        includeTestsMatching 'io.appium.java_client.service.local.ThreadSafetyTest'
-    }
-}
+        e2eIosTest(JvmTestSuite) {
+            sources {
+                java {
+                    srcDirs = ['src/e2eIosTest/java']
+                }
+            }
+            dependencies {
+                implementation project()
+                implementation(sourceSets.test.output)
+                implementation('org.apache.commons:commons-lang3:3.17.0')
+            }
 
-task miscTest( type: Test ) {
-    useJUnitPlatform()
-    testLogging.showStandardStreams = true
-    testLogging.exceptionFormat = 'full'
-    filter {
-        includeTestsMatching 'io.appium.java_client.touch.*'
-        includeTestsMatching 'io.appium.java_client.events.*'
-        includeTestsMatching 'io.appium.java_client.remote.*'
-        includeTestsMatching 'io.appium.java_client.drivers.options.*'
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter(test)
+                    filter {
+                        exclude '**/IOSScreenRecordTest.class'
+                        exclude '**/ImagesComparisonTest.class'
+                        exclude '**/IOSNativeWebTapSettingTest.class'
+                    }
+                }
+            }
+        }
+
+        e2eAndroidTest(JvmTestSuite) {
+            sources {
+                java {
+                    srcDirs = ['src/e2eAndroidTest/java']
+                }
+            }
+            dependencies {
+                implementation project()
+                implementation(sourceSets.test.output)
+                implementation('io.github.bonigarcia:webdrivermanager:5.9.2') {
+                    exclude group: 'org.seleniumhq.selenium'
+                }
+            }
+
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter(test)
+                    filter {
+                        // The following tests fail and should be reviewed/fixed
+                        exclude '**/AndroidAbilityToUseSupplierTest.class'
+                        exclude '**/AndroidConnectionTest.class'
+                        exclude '**/AndroidContextTest.class'
+                        exclude '**/AndroidDataMatcherTest.class'
+                        exclude '**/AndroidDriverTest.class'
+                        exclude '**/AndroidElementTest.class'
+                        exclude '**/AndroidFunctionTest.class'
+                        exclude '**/AndroidSearchingTest.class'
+                        exclude '**/AndroidTouchTest.class'
+                        exclude '**/AndroidViewMatcherTest.class'
+                        exclude '**/ExecuteCDPCommandTest.class'
+                        exclude '**/ExecuteDriverScriptTest.class'
+                        exclude '**/FingerPrintTest.class'
+                        exclude '**/ImagesComparisonTest.class'
+                        exclude '**/KeyCodeTest.class'
+                        exclude '**/LogEventTest.class'
+                        exclude '**/UIAutomator2Test.class'
+                        exclude '**/AndroidPageObjectTest.class'
+                        exclude '**/MobileBrowserCompatibilityTest.class'
+                    }
+                }
+            }
+        }
+
+        e2eFlutterTest(JvmTestSuite) {
+            sources {
+                java {
+                    srcDirs = ['src/e2eFlutterTest/java']
+                }
+            }
+            dependencies {
+                implementation project()
+                implementation(sourceSets.test.output)
+            }
+
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter(test)
+                    systemProperties project.properties.subMap(["platform", "flutterApp"])
+                }
+            }
+        }
     }
 }

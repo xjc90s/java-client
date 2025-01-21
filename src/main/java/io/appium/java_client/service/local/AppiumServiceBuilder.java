@@ -16,19 +16,15 @@
 
 package io.appium.java_client.service.local;
 
-import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import io.appium.java_client.remote.AndroidMobileCapabilityType;
+import io.appium.java_client.android.options.context.SupportsChromedriverExecutableOption;
+import io.appium.java_client.android.options.signing.SupportsKeystoreOptions;
 import io.appium.java_client.remote.MobileBrowserType;
-import io.appium.java_client.remote.MobileCapabilityType;
+import io.appium.java_client.remote.options.SupportsAppOption;
 import io.appium.java_client.service.local.flags.GeneralServerFlag;
 import io.appium.java_client.service.local.flags.ServerArgument;
 import lombok.SneakyThrows;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
-import org.apache.commons.validator.routines.InetAddressValidator;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.os.ExecutableFinder;
@@ -44,6 +40,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +48,8 @@ import java.util.Set;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 import static org.openqa.selenium.remote.CapabilityType.PLATFORM_NAME;
 
 public final class AppiumServiceBuilder
@@ -71,22 +69,26 @@ public final class AppiumServiceBuilder
      */
     private static final String NODE_PATH = "NODE_BINARY_PATH";
 
-    public static final String BROADCAST_IP_ADDRESS = "0.0.0.0";
+    public static final String BROADCAST_IP4_ADDRESS = "0.0.0.0";
+    public static final String BROADCAST_IP6_ADDRESS = "::";
     private static final Path APPIUM_PATH_SUFFIX = Paths.get("appium", "build", "lib", "main.js");
     public static final int DEFAULT_APPIUM_PORT = 4723;
     private final Map<String, String> serverArguments = new HashMap<>();
     private File appiumJS;
     private File node;
-    private String ipAddress = BROADCAST_IP_ADDRESS;
+    private String ipAddress = BROADCAST_IP4_ADDRESS;
     private Capabilities capabilities;
     private boolean autoQuoteCapabilitiesOnWindows = false;
-    private static final Function<File, String> APPIUM_JS_NOT_EXIST_ERROR = (fullPath) -> String.format(
+    private static final Function<File, String> APPIUM_JS_NOT_EXIST_ERROR = fullPath -> String.format(
             "The main Appium script does not exist at '%s'", fullPath.getAbsolutePath());
-    private static final Function<File, String> NODE_JS_NOT_EXIST_ERROR = (fullPath) ->
+    private static final Function<File, String> NODE_JS_NOT_EXIST_ERROR = fullPath ->
             String.format("The main NodeJS executable does not exist at '%s'", fullPath.getAbsolutePath());
 
-    private static final List<String> PATH_CAPABILITIES = ImmutableList.of(AndroidMobileCapabilityType.KEYSTORE_PATH,
-            AndroidMobileCapabilityType.CHROMEDRIVER_EXECUTABLE, MobileCapabilityType.APP);
+    private static final List<String> PATH_CAPABILITIES = List.of(
+            SupportsChromedriverExecutableOption.CHROMEDRIVER_EXECUTABLE_OPTION,
+            SupportsKeystoreOptions.KEYSTORE_PATH_OPTION,
+            SupportsAppOption.APP_OPTION
+    );
 
     public AppiumServiceBuilder() {
         usingPort(DEFAULT_APPIUM_PORT);
@@ -141,14 +143,14 @@ public final class AppiumServiceBuilder
 
     private static File findMainScript() {
         File npm = findNpm();
-        List<String> cmdLine = SystemUtils.IS_OS_WINDOWS
+        List<String> cmdLine = System.getProperty("os.name").toLowerCase().contains("win")
                 // npm is a batch script, so on windows we need to use cmd.exe in order to execute it
                 ? Arrays.asList("cmd.exe", "/c", String.format("\"%s\" root -g", npm.getAbsolutePath()))
                 : Arrays.asList(npm.getAbsolutePath(), "root", "-g");
         ProcessBuilder pb = new ProcessBuilder(cmdLine);
         String nodeModulesRoot;
         try {
-            nodeModulesRoot = IOUtils.toString(pb.start().getInputStream(), StandardCharsets.UTF_8).trim();
+            nodeModulesRoot = new String(pb.start().getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
         } catch (IOException e) {
             throw new InvalidServerInstanceException(
                     "Cannot retrieve the path to the folder where NodeJS modules are located", e);
@@ -160,7 +162,6 @@ public final class AppiumServiceBuilder
         return mainAppiumJs;
     }
 
-    @Override
     protected File findDefaultExecutable() {
         if (this.node != null) {
             validatePath(this.node.getAbsolutePath(), NODE_JS_NOT_EXIST_ERROR.apply(this.node));
@@ -227,9 +228,11 @@ public final class AppiumServiceBuilder
     }
 
     private static String sanitizeBasePath(String basePath) {
-        basePath = checkNotNull(basePath).trim();
-        checkArgument(!basePath.isEmpty(),
-            "Given base path is not valid - blank or empty values are not allowed for base path");
+        basePath = requireNonNull(basePath).trim();
+        checkArgument(
+                !basePath.isEmpty(),
+                "Given base path is not valid - blank or empty values are not allowed for base path"
+        );
         return basePath.endsWith("/") ? basePath : basePath + "/";
     }
 
@@ -280,10 +283,10 @@ public final class AppiumServiceBuilder
     @Nullable
     private static File loadPathFromEnv(String envVarName) {
         String fullPath = System.getProperty(envVarName);
-        if (StringUtils.isBlank(fullPath)) {
+        if (isNullOrEmpty(fullPath)) {
             fullPath = System.getenv(envVarName);
         }
-        return StringUtils.isBlank(fullPath) ? null : new File(fullPath);
+        return isNullOrEmpty(fullPath) ? null : new File(fullPath);
     }
 
     private void loadPathToMainScript() {
@@ -353,22 +356,15 @@ public final class AppiumServiceBuilder
     }
 
     @Override
-    protected ImmutableList<String> createArgs() {
+    protected List<String> createArgs() {
         List<String> argList = new ArrayList<>();
         loadPathToMainScript();
         argList.add(appiumJS.getAbsolutePath());
         argList.add("--port");
         argList.add(String.valueOf(getPort()));
 
-        if (StringUtils.isBlank(ipAddress)) {
-            ipAddress = BROADCAST_IP_ADDRESS;
-        } else {
-            InetAddressValidator validator = InetAddressValidator.getInstance();
-            if (!validator.isValid(ipAddress) && !validator.isValidInet4Address(ipAddress)
-                    && !validator.isValidInet6Address(ipAddress)) {
-                throw new IllegalArgumentException(
-                        "The invalid IP address " + ipAddress + " is defined");
-            }
+        if (isNullOrEmpty(ipAddress)) {
+            ipAddress = BROADCAST_IP4_ADDRESS;
         }
         argList.add("--address");
         argList.add(ipAddress);
@@ -383,12 +379,12 @@ public final class AppiumServiceBuilder
         for (Map.Entry<String, String> entry : entries) {
             String argument = entry.getKey();
             String value = entry.getValue();
-            if (StringUtils.isBlank(argument) || value == null) {
+            if (isNullOrEmpty(argument) || value == null) {
                 continue;
             }
 
             argList.add(argument);
-            if (!StringUtils.isBlank(value)) {
+            if (!isNullOrEmpty(value)) {
                 argList.add(value);
             }
         }
@@ -398,7 +394,14 @@ public final class AppiumServiceBuilder
             argList.add(capabilitiesToCmdlineArg());
         }
 
-        return new ImmutableList.Builder<String>().addAll(argList).build();
+        return Collections.unmodifiableList(argList);
+    }
+
+    @Override
+    protected void loadSystemProperties() {
+        if (this.exe == null) {
+            usingDriverExecutable(findDefaultExecutable());
+        }
     }
 
     /**

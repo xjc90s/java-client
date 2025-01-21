@@ -16,32 +16,34 @@
 
 package io.appium.java_client.ios;
 
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.MobileCommand;
 
-import java.util.AbstractMap;
 import java.util.Map;
 
+@Deprecated
 public class IOSMobileCommandHelper extends MobileCommand {
 
     /**
      * This method forms a {@link Map} of parameters for the device shaking.
      *
      * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated this helper is deprecated and will be removed in future versions.
      */
-    public static Map.Entry<String, Map<String, ?>>  shakeCommand() {
-        return new AbstractMap.SimpleEntry<>(SHAKE, ImmutableMap.of());
+    @Deprecated
+    public static Map.Entry<String, Map<String, ?>> shakeCommand() {
+        return Map.entry(SHAKE, Map.of());
     }
-    
+
     /**
      * This method forms a {@link Map} of parameters for the touchId simulator.
-     * 
+     *
      * @param match If true, simulates a successful fingerprint scan. If false, simulates a failed fingerprint scan.
      * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated this helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> touchIdCommand(boolean match) {
-        return new AbstractMap.SimpleEntry<>(
-            TOUCH_ID, prepareArguments("match", match));
+        return Map.entry(TOUCH_ID, Map.of("match", match));
     }
 
     /**
@@ -50,9 +52,10 @@ public class IOSMobileCommandHelper extends MobileCommand {
      *
      * @param enabled Whether to enable or disable Touch ID Enrollment for Simulator.
      * @return a key-value pair. The key is the command name. The value is a {@link Map} command arguments.
+     * @deprecated this helper is deprecated and will be removed in future versions.
      */
+    @Deprecated
     public static Map.Entry<String, Map<String, ?>> toggleTouchIdEnrollmentCommand(boolean enabled) {
-        return new AbstractMap.SimpleEntry<>(
-                TOUCH_ID_ENROLLMENT, prepareArguments("enabled", enabled));
+        return Map.entry(TOUCH_ID_ENROLLMENT, Map.of("enabled", enabled));
     }
 }

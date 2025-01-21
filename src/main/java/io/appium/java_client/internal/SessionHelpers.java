@@ -28,6 +28,9 @@ import java.util.regex.Pattern;
 public class SessionHelpers {
     private static final Pattern SESSION = Pattern.compile("/session/([^/]+)");
 
+    private SessionHelpers() {
+    }
+
     @Data public static class SessionAddress {
         private final URL serverUrl;
         private final String id;

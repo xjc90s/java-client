@@ -1,0 +1,345 @@
+package io.appium.java_client.service.local;
+
+import io.appium.java_client.TestUtils;
+import io.appium.java_client.android.TestResources;
+import io.appium.java_client.android.options.UiAutomator2Options;
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import java.io.File;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import static io.appium.java_client.TestUtils.getLocalIp4Address;
+import static io.appium.java_client.service.local.AppiumDriverLocalService.buildDefaultService;
+import static io.appium.java_client.service.local.AppiumServiceBuilder.APPIUM_PATH;
+import static io.appium.java_client.service.local.AppiumServiceBuilder.BROADCAST_IP4_ADDRESS;
+import static io.appium.java_client.service.local.AppiumServiceBuilder.DEFAULT_APPIUM_PORT;
+import static io.appium.java_client.service.local.flags.GeneralServerFlag.BASEPATH;
+import static io.appium.java_client.service.local.flags.GeneralServerFlag.CALLBACK_ADDRESS;
+import static io.appium.java_client.service.local.flags.GeneralServerFlag.SESSION_OVERRIDE;
+import static io.github.bonigarcia.wdm.WebDriverManager.chromedriver;
+import static java.lang.System.getProperty;
+import static java.lang.System.setProperty;
+import static java.util.Arrays.asList;
+import static java.util.Optional.ofNullable;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@SuppressWarnings("ResultOfMethodCallIgnored")
+class ServerBuilderTest {
+
+    /**
+     * It may be impossible to find the path to the instance of appium server due to different circumstance.
+     * So user may use environment variables/system properties to define the full path to the server
+     * main.js that is supposed to be default.
+     */
+    private static final String PATH_TO_APPIUM_NODE_IN_PROPERTIES = getProperty(APPIUM_PATH);
+
+    /**
+     * This is the path to the stub main.js file
+     */
+    private static final Path PATH_T0_TEST_MAIN_JS = TestUtils.resourcePathToAbsolutePath("main.js");
+
+    private static String testIP;
+    private AppiumDriverLocalService service;
+    private File testLogFile;
+    private OutputStream stream;
+    private static WebDriverManager chromeManager;
+
+    /**
+     * initialization.
+     */
+    @BeforeAll
+    public static void beforeClass() throws Exception {
+        testIP = getLocalIp4Address();
+        chromeManager = chromedriver();
+        chromeManager.setup();
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        ofNullable(service).ifPresent(AppiumDriverLocalService::stop);
+
+        if (stream != null) {
+            stream.close();
+        }
+
+        ofNullable(testLogFile).ifPresent(savedTestLogFile -> {
+            if (savedTestLogFile.exists()) {
+                savedTestLogFile.delete();
+            }
+        });
+
+        System.clearProperty(APPIUM_PATH);
+        ofNullable(PATH_TO_APPIUM_NODE_IN_PROPERTIES).ifPresent(s -> setProperty(APPIUM_PATH, s));
+    }
+
+    @Test
+    void checkAbilityToAddLogMessageConsumer() {
+        List<String> log = new ArrayList<>();
+        service = buildDefaultService();
+        service.clearOutPutStreams();
+        service.addLogMessageConsumer(log::add);
+        service.start();
+        assertTrue(log.size() > 0);
+    }
+
+    @Test
+    void checkAbilityToStartDefaultService() {
+        service = buildDefaultService();
+        service.start();
+        assertTrue(service.isRunning());
+    }
+
+    @Test
+    void checkAbilityToFindNodeDefinedInProperties() {
+        setProperty(APPIUM_PATH, PATH_T0_TEST_MAIN_JS.toString());
+        assertThat(new AppiumServiceBuilder().createArgs().get(0), is(PATH_T0_TEST_MAIN_JS.toString()));
+    }
+
+    @Test
+    void checkAbilityToUseNodeDefinedExplicitly() {
+        AppiumServiceBuilder builder = new AppiumServiceBuilder().withAppiumJS(PATH_T0_TEST_MAIN_JS.toFile());
+        assertThat(builder.createArgs().get(0), is(PATH_T0_TEST_MAIN_JS.toString()));
+    }
+
+    @Test
+    void checkAbilityToStartServiceOnAFreePort() {
+        service = new AppiumServiceBuilder().usingAnyFreePort().build();
+        service.start();
+        assertTrue(service.isRunning());
+    }
+
+    @Test
+    void checkAbilityToStartServiceUsingNonLocalhostIP() {
+        service = new AppiumServiceBuilder().withIPAddress(testIP).build();
+        service.start();
+        assertTrue(service.isRunning());
+    }
+
+    @Test
+    void checkAbilityToStartServiceUsingFlags() {
+        service = new AppiumServiceBuilder()
+                .withArgument(CALLBACK_ADDRESS, testIP)
+                .withArgument(SESSION_OVERRIDE)
+                .build();
+        service.start();
+        assertTrue(service.isRunning());
+    }
+
+    @Test
+    void checkAbilityToStartServiceUsingCapabilities() {
+        UiAutomator2Options options = new UiAutomator2Options()
+                .fullReset()
+                .setNewCommandTimeout(Duration.ofSeconds(60))
+                .setAppPackage("io.appium.android.apis")
+                .setAppActivity(".view.WebView1")
+                .setApp(TestResources.API_DEMOS_APK.toString())
+                .setChromedriverExecutable(chromeManager.getDownloadedDriverPath());
+
+        service = new AppiumServiceBuilder().withCapabilities(options).build();
+        service.start();
+        assertTrue(service.isRunning());
+    }
+
+    @Test
+    void checkAbilityToStartServiceUsingCapabilitiesAndFlags() {
+
+        UiAutomator2Options options = new UiAutomator2Options()
+                .fullReset()
+                .setNewCommandTimeout(Duration.ofSeconds(60))
+                .setAppPackage("io.appium.android.apis")
+                .setAppActivity(".view.WebView1")
+                .setApp(TestResources.API_DEMOS_APK.toString())
+                .setChromedriverExecutable(chromeManager.getDownloadedDriverPath())
+                .amend("winPath", "C:\\selenium\\app.apk")
+                .amend("unixPath", "/selenium/app.apk")
+                .amend("quotes", "\"'")
+                .setChromeOptions(
+                        Map.of("env", Map.of("test", "value"), "val2", 0)
+                );
+
+        service = new AppiumServiceBuilder()
+                .withArgument(CALLBACK_ADDRESS, testIP)
+                .withArgument(SESSION_OVERRIDE)
+                .withCapabilities(options).build();
+        service.start();
+        assertTrue(service.isRunning());
+    }
+
+    @Test
+    void checkAbilityToChangeOutputStream() throws Exception {
+        testLogFile = new File("test");
+        testLogFile.createNewFile();
+        stream = Files.newOutputStream(testLogFile.toPath());
+        service = buildDefaultService();
+        service.addOutPutStream(stream);
+        service.start();
+        assertThat(testLogFile.length(), greaterThan(0L));
+    }
+
+    @Test
+    void checkAbilityToChangeOutputStreamAfterTheServiceIsStarted() throws Exception {
+        testLogFile = new File("test");
+        testLogFile.createNewFile();
+        stream = Files.newOutputStream(testLogFile.toPath());
+        service = buildDefaultService();
+        service.start();
+        service.addOutPutStream(stream);
+        service.isRunning();
+        assertThat(testLogFile.length(), greaterThan(0L));
+    }
+
+    @Test
+    void checkAbilityToShutDownService() {
+        service = buildDefaultService();
+        service.start();
+        service.stop();
+        assertFalse(service.isRunning());
+    }
+
+    @Test
+    void checkAbilityToStartAndShutDownFewServices() throws Exception {
+        List<AppiumDriverLocalService> services = asList(
+                new AppiumServiceBuilder().usingAnyFreePort().build(),
+                new AppiumServiceBuilder().usingAnyFreePort().build(),
+                new AppiumServiceBuilder().usingAnyFreePort().build(),
+                new AppiumServiceBuilder().usingAnyFreePort().build());
+        services.parallelStream().forEach(AppiumDriverLocalService::start);
+        assertTrue(services.stream().allMatch(AppiumDriverLocalService::isRunning));
+        SECONDS.sleep(1);
+        services.parallelStream().forEach(AppiumDriverLocalService::stop);
+        assertTrue(services.stream().noneMatch(AppiumDriverLocalService::isRunning));
+    }
+
+    @Test
+    void checkAbilityToStartServiceWithLogFile() throws Exception {
+        testLogFile = new File("Log.txt");
+        testLogFile.createNewFile();
+        service = new AppiumServiceBuilder().withLogFile(testLogFile).build();
+        service.start();
+        assertTrue(testLogFile.exists());
+        assertThat(testLogFile.length(), greaterThan(0L));
+    }
+
+    @Test
+    void checkAbilityToStartServiceWithPortUsingFlag() {
+        String port = "8996";
+        String expectedUrl = String.format("http://0.0.0.0:%s/", port);
+
+        service = new AppiumServiceBuilder()
+                .withArgument(() -> "--port", port)
+                .build();
+        String actualUrl = service.getUrl().toString();
+        assertEquals(expectedUrl, actualUrl);
+        service.start();
+    }
+
+    @Test
+    void checkAbilityToStartServiceWithPortUsingShortFlag() {
+        String port = "8996";
+        String expectedUrl = String.format("http://0.0.0.0:%s/", port);
+
+        service = new AppiumServiceBuilder()
+                .withArgument(() -> "-p", port)
+                .build();
+        String actualUrl = service.getUrl().toString();
+        assertEquals(expectedUrl, actualUrl);
+        service.start();
+    }
+
+    @Test
+    void checkAbilityToStartServiceWithIpUsingFlag() {
+        String expectedUrl = String.format("http://%s:4723/", testIP);
+
+        service = new AppiumServiceBuilder()
+                .withArgument(() -> "--address", testIP)
+                .build();
+        String actualUrl = service.getUrl().toString();
+        assertEquals(expectedUrl, actualUrl);
+        service.start();
+    }
+
+    @Test
+    void checkAbilityToStartServiceWithIpUsingShortFlag() {
+        String expectedUrl = String.format("http://%s:4723/", testIP);
+
+        service = new AppiumServiceBuilder()
+                .withArgument(() -> "-a", testIP)
+                .build();
+        String actualUrl = service.getUrl().toString();
+        assertEquals(expectedUrl, actualUrl);
+        service.start();
+    }
+
+    @Test
+    void checkAbilityToStartServiceWithLogFileUsingFlag() {
+        testLogFile = new File("Log2.txt");
+
+        service = new AppiumServiceBuilder()
+                .withArgument(() -> "--log", testLogFile.getAbsolutePath())
+                .build();
+        service.start();
+        assertTrue(testLogFile.exists());
+    }
+
+    @Test
+    void checkAbilityToStartServiceWithLogFileUsingShortFlag() {
+        testLogFile = new File("Log3.txt");
+
+        service = new AppiumServiceBuilder()
+                .withArgument(() -> "-g", testLogFile.getAbsolutePath())
+                .build();
+        service.start();
+        assertTrue(testLogFile.exists());
+    }
+
+    @Test
+    void checkAbilityToStartServiceUsingValidBasePathWithMultiplePathParams() {
+        String basePath = "/wd/hub";
+        service = new AppiumServiceBuilder().withArgument(BASEPATH, basePath).build();
+        service.start();
+        assertTrue(service.isRunning());
+        String baseUrl = String.format("http://%s:%d", BROADCAST_IP4_ADDRESS, DEFAULT_APPIUM_PORT);
+        assertEquals(baseUrl + basePath + "/", service.getUrl().toString());
+    }
+
+    @Test
+    void checkAbilityToStartServiceUsingValidBasePathWithSinglePathParams() {
+        String basePath = "/wd/";
+        service = new AppiumServiceBuilder().withArgument(BASEPATH, basePath).build();
+        service.start();
+        assertTrue(service.isRunning());
+        String baseUrl = String.format("http://%s:%d/", BROADCAST_IP4_ADDRESS, DEFAULT_APPIUM_PORT);
+        assertEquals(baseUrl + basePath.substring(1), service.getUrl().toString());
+    }
+
+    @Test
+    void checkAbilityToValidateBasePathForEmptyBasePath() {
+        assertThrows(IllegalArgumentException.class, () -> new AppiumServiceBuilder().withArgument(BASEPATH, ""));
+    }
+
+    @Test
+    void checkAbilityToValidateBasePathForBlankBasePath() {
+        assertThrows(IllegalArgumentException.class, () -> new AppiumServiceBuilder().withArgument(BASEPATH, "   "));
+    }
+
+    @Test
+    void checkAbilityToValidateBasePathForNullBasePath() {
+        assertThrows(NullPointerException.class, () -> new AppiumServiceBuilder().withArgument(BASEPATH, null));
+    }
+}

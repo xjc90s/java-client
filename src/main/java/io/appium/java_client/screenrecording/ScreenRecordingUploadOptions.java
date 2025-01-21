@@ -16,11 +16,11 @@
 
 package io.appium.java_client.screenrecording;
 
-import com.google.common.collect.ImmutableMap;
-
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 public class ScreenRecordingUploadOptions {
@@ -43,7 +43,7 @@ public class ScreenRecordingUploadOptions {
      * @return self instance for chaining.
      */
     public ScreenRecordingUploadOptions withRemotePath(String remotePath) {
-        this.remotePath = checkNotNull(remotePath);
+        this.remotePath = requireNonNull(remotePath);
         return this;
     }
 
@@ -56,8 +56,8 @@ public class ScreenRecordingUploadOptions {
      * @return self instance for chaining.
      */
     public ScreenRecordingUploadOptions withAuthCredentials(String user, String pass) {
-        this.user = checkNotNull(user);
-        this.pass = checkNotNull(pass);
+        this.user = requireNonNull(user);
+        this.pass = requireNonNull(pass);
         return this;
     }
 
@@ -73,7 +73,7 @@ public class ScreenRecordingUploadOptions {
      * @return self instance for chaining.
      */
     public ScreenRecordingUploadOptions withHttpMethod(RequestMethod method) {
-        this.method = checkNotNull(method).name();
+        this.method = requireNonNull(method).name();
         return this;
     }
 
@@ -87,7 +87,7 @@ public class ScreenRecordingUploadOptions {
      * @return self instance for chaining.
      */
     public ScreenRecordingUploadOptions withFileFieldName(String fileFieldName) {
-        this.fileFieldName = checkNotNull(fileFieldName);
+        this.fileFieldName = requireNonNull(fileFieldName);
         return this;
     }
 
@@ -100,7 +100,7 @@ public class ScreenRecordingUploadOptions {
      * @return self instance for chaining.
      */
     public ScreenRecordingUploadOptions withFormFields(Map<String, Object> formFields) {
-        this.formFields = checkNotNull(formFields);
+        this.formFields = requireNonNull(formFields);
         return this;
     }
 
@@ -112,7 +112,7 @@ public class ScreenRecordingUploadOptions {
      * @return self instance for chaining.
      */
     public ScreenRecordingUploadOptions withHeaders(Map<String, String> headers) {
-        this.headers = checkNotNull(headers);
+        this.headers = requireNonNull(headers);
         return this;
     }
 
@@ -123,14 +123,14 @@ public class ScreenRecordingUploadOptions {
      * @return arguments mapping.
      */
     public Map<String, Object> build() {
-        final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        ofNullable(remotePath).map(x -> builder.put("remotePath", x));
-        ofNullable(user).map(x -> builder.put("user", x));
-        ofNullable(pass).map(x -> builder.put("pass", x));
-        ofNullable(method).map(x -> builder.put("method", x));
-        ofNullable(fileFieldName).map(x -> builder.put("fileFieldName", x));
-        ofNullable(formFields).map(x -> builder.put("formFields", x));
-        ofNullable(headers).map(x -> builder.put("headers", x));
-        return builder.build();
+        var map = new HashMap<String, Object>();
+        ofNullable(remotePath).map(x -> map.put("remotePath", x));
+        ofNullable(user).map(x -> map.put("user", x));
+        ofNullable(pass).map(x -> map.put("pass", x));
+        ofNullable(method).map(x -> map.put("method", x));
+        ofNullable(fileFieldName).map(x -> map.put("fileFieldName", x));
+        ofNullable(formFields).map(x -> map.put("formFields", x));
+        ofNullable(headers).map(x -> map.put("headers", x));
+        return Collections.unmodifiableMap(map);
     }
 }

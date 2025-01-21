@@ -20,9 +20,10 @@ import java.time.Duration;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.time.Duration.ofMillis;
+import static java.util.Objects.requireNonNull;
 
+@Deprecated
 public class WaitOptions extends ActionOptions<WaitOptions> {
     protected Duration duration = ofMillis(0);
 
@@ -44,7 +45,7 @@ public class WaitOptions extends ActionOptions<WaitOptions> {
      * @return this instance for chaining.
      */
     public WaitOptions withDuration(Duration duration) {
-        checkNotNull(duration);
+        requireNonNull(duration);
         checkArgument(duration.toMillis() >= 0,
                 "Duration value should be greater or equal to zero");
         this.duration = duration;

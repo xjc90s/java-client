@@ -16,17 +16,23 @@
 
 package io.appium.java_client.remote;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.appium.java_client.remote.options.BaseOptions;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.remote.CommandPayload;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.openqa.selenium.remote.DriverCommand.NEW_SESSION;
 
+/**
+ * This class is deprecated and will be removed.
+ *
+ * @deprecated Use CommandPayload instead.
+ */
+@Deprecated
 public class AppiumNewSessionCommandPayload extends CommandPayload {
     /**
      * Appends "appium:" prefix to all non-prefixed non-standard capabilities.
@@ -37,7 +43,7 @@ public class AppiumNewSessionCommandPayload extends CommandPayload {
     private static Map<String, Object> makeW3CSafe(Capabilities possiblyInvalidCapabilities) {
         return Require.nonNull("Capabilities", possiblyInvalidCapabilities)
                 .asMap().entrySet().stream()
-                .collect(ImmutableMap.toImmutableMap(
+                .collect(Collectors.toUnmodifiableMap(
                     entry -> BaseOptions.toW3cName(entry.getKey()),
                     Map.Entry::getValue
                 ));
@@ -50,8 +56,8 @@ public class AppiumNewSessionCommandPayload extends CommandPayload {
      * @param capabilities User-provided capabilities.
      */
     public AppiumNewSessionCommandPayload(Capabilities capabilities) {
-        super(NEW_SESSION, ImmutableMap.of(
-                "capabilities", ImmutableSet.of(makeW3CSafe(capabilities)),
+        super(NEW_SESSION, Map.of(
+                "capabilities", Set.of(makeW3CSafe(capabilities)),
                 "desiredCapabilities", capabilities
         ));
     }

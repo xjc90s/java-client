@@ -21,6 +21,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.pagefactory.ElementLocator;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 
 import static io.appium.java_client.pagefactory.ThrowableUtil.extractReadableException;
@@ -28,13 +29,14 @@ import static io.appium.java_client.pagefactory.ThrowableUtil.extractReadableExc
 /**
  * Intercepts requests to {@link WebElement}.
  */
-class ElementInterceptor extends InterceptorOfASingleElement {
+public class ElementInterceptor extends InterceptorOfASingleElement {
 
-    ElementInterceptor(ElementLocator locator, WebDriver driver) {
+    public ElementInterceptor(ElementLocator locator, WeakReference<WebDriver> driver) {
         super(locator, driver);
     }
 
-    @Override protected Object getObject(WebElement element, Method method, Object[] args)
+    @Override
+    protected Object getObject(WebElement element, Method method, Object[] args)
         throws Throwable {
         try {
             return method.invoke(element, args);

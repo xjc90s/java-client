@@ -19,10 +19,10 @@ package io.appium.java_client.pagefactory;
 import io.appium.java_client.pagefactory.bys.builder.AppiumByBuilder;
 import io.appium.java_client.pagefactory.locator.CacheableElementLocatorFactory;
 import io.appium.java_client.pagefactory.locator.CacheableLocator;
-import org.openqa.selenium.By;
 import org.openqa.selenium.SearchContext;
 
 import javax.annotation.Nullable;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.time.Duration;
@@ -32,6 +32,7 @@ import static java.util.Optional.ofNullable;
 
 public class AppiumElementLocatorFactory implements CacheableElementLocatorFactory {
     private final SearchContext searchContext;
+    private final WeakReference<SearchContext> searchContextReference;
     private final Duration duration;
     private final AppiumByBuilder builder;
 
@@ -39,21 +40,47 @@ public class AppiumElementLocatorFactory implements CacheableElementLocatorFacto
      * Creates a new mobile element locator factory.
      *
      * @param searchContext     The context to use when finding the element
-     * @param duration   timeout parameters for the elements to be found
-     * @param builder    is handler of Appium-specific page object annotations
+     * @param duration          timeout parameters for the elements to be found
+     * @param builder           is handler of Appium-specific page object annotations
      */
-    public AppiumElementLocatorFactory(SearchContext searchContext, Duration duration,
-                                       AppiumByBuilder builder) {
+    public AppiumElementLocatorFactory(
+            SearchContext searchContext,
+            Duration duration,
+            AppiumByBuilder builder
+    ) {
         this.searchContext = searchContext;
+        this.searchContextReference = null;
         this.duration = duration;
         this.builder = builder;
     }
 
-    public @Nullable CacheableLocator createLocator(Field field) {
+    /**
+     * Creates a new mobile element locator factory.
+     *
+     * @param searchContextReference     The context reference to use when finding the element
+     * @param duration                   timeout parameters for the elements to be found
+     * @param builder                    is handler of Appium-specific page object annotations
+     */
+    AppiumElementLocatorFactory(
+            WeakReference<SearchContext> searchContextReference,
+            Duration duration,
+            AppiumByBuilder builder
+    ) {
+        this.searchContextReference = searchContextReference;
+        this.searchContext = null;
+        this.duration = duration;
+        this.builder = builder;
+    }
+
+    @Nullable
+    @Override
+    public CacheableLocator createLocator(Field field) {
         return this.createLocator((AnnotatedElement) field);
     }
 
-    @Override public @Nullable CacheableLocator createLocator(AnnotatedElement annotatedElement) {
+    @Nullable
+    @Override
+    public CacheableLocator createLocator(AnnotatedElement annotatedElement) {
         Duration customDuration;
         if (annotatedElement.isAnnotationPresent(WithTimeout.class)) {
             WithTimeout withTimeout = annotatedElement.getAnnotation(WithTimeout.class);
@@ -61,14 +88,19 @@ public class AppiumElementLocatorFactory implements CacheableElementLocatorFacto
         } else {
             customDuration = duration;
         }
-
         builder.setAnnotated(annotatedElement);
-        By byResult = builder.buildBy();
-
-        return ofNullable(byResult)
-                .map(by -> new AppiumElementLocator(searchContext, by, builder.isLookupCached(), customDuration))
-                .orElse(null);
+        try {
+            return ofNullable(builder.buildBy())
+                    .map(by -> {
+                        var isLookupCached = builder.isLookupCached();
+                        return searchContextReference != null
+                            ? new AppiumElementLocator(searchContextReference, by, isLookupCached, customDuration)
+                            : new AppiumElementLocator(searchContext, by, isLookupCached, customDuration);
+                    })
+                    .orElse(null);
+        } finally {
+            // unleak element reference after the locator is built
+            builder.setAnnotated(null);
+        }
     }
-
-
 }

@@ -16,9 +16,9 @@
 
 package io.appium.java_client.ios;
 
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.AppiumClientConfig;
 import io.appium.java_client.AppiumDriver;
+import io.appium.java_client.CommandExecutionHelper;
 import io.appium.java_client.HasAppStrings;
 import io.appium.java_client.HasDeviceTime;
 import io.appium.java_client.HasOnScreenKeyboard;
@@ -29,7 +29,6 @@ import io.appium.java_client.LocksDevice;
 import io.appium.java_client.PerformsTouchActions;
 import io.appium.java_client.PullsFiles;
 import io.appium.java_client.PushesFiles;
-import io.appium.java_client.SupportsLegacyAppManagement;
 import io.appium.java_client.battery.HasBattery;
 import io.appium.java_client.remote.AutomationName;
 import io.appium.java_client.remote.SupportsContextSwitching;
@@ -50,11 +49,7 @@ import org.openqa.selenium.remote.http.ClientConfig;
 import org.openqa.selenium.remote.http.HttpClient;
 
 import java.net.URL;
-import java.util.Collections;
 import java.util.Map;
-
-import static io.appium.java_client.MobileCommand.prepareArguments;
-import static org.openqa.selenium.remote.DriverCommand.EXECUTE_SCRIPT;
 
 /**
  * iOS driver implementation.
@@ -67,7 +62,6 @@ public class IOSDriver extends AppiumDriver implements
         HasDeviceTime,
         PullsFiles,
         InteractsWithApps,
-        SupportsLegacyAppManagement,
         HasAppStrings,
         PerformsTouchActions,
         HidesKeyboardWithKeyName,
@@ -247,11 +241,9 @@ public class IOSDriver extends AppiumDriver implements
         return new InnerTargetLocator();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public IOSBatteryInfo getBatteryInfo() {
-        return new IOSBatteryInfo((Map<String, Object>) execute(EXECUTE_SCRIPT, ImmutableMap.of(
-                "script", "mobile: batteryInfo", "args", Collections.emptyList())).getValue());
+        return new IOSBatteryInfo(CommandExecutionHelper.executeScript(this, "mobile: batteryInfo"));
     }
 
     private class InnerTargetLocator extends RemoteTargetLocator {
@@ -282,12 +274,21 @@ public class IOSDriver extends AppiumDriver implements
         }
 
         @Override public void sendKeys(String keysToSend) {
-            execute(DriverCommand.SET_ALERT_VALUE, prepareArguments("value", keysToSend));
+            execute(DriverCommand.SET_ALERT_VALUE, Map.of("value", keysToSend));
         }
 
     }
 
+    /**
+     * Provides the location context.
+     *
+     * @return instance of {@link RemoteLocationContext}
+     * @deprecated This method, {@link org.openqa.selenium.html5.LocationContext} and {@link RemoteLocationContext}
+     *     interface are deprecated, use {@link #getLocation()} and
+     *     {@link #setLocation(io.appium.java_client.Location)} instead.
+     */
     @Override
+    @Deprecated(forRemoval = true)
     public RemoteLocationContext getLocationContext() {
         return locationContext;
     }
@@ -295,7 +296,7 @@ public class IOSDriver extends AppiumDriver implements
     @Override
     public synchronized StringWebSocketClient getSyslogClient() {
         if (syslogClient == null) {
-            syslogClient = new StringWebSocketClient();
+            syslogClient = new StringWebSocketClient(getHttpClient());
         }
         return syslogClient;
     }

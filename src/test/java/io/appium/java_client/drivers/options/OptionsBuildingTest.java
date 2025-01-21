@@ -16,13 +16,12 @@
 
 package io.appium.java_client.drivers.options;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.android.options.EspressoOptions;
 import io.appium.java_client.android.options.UiAutomator2Options;
 import io.appium.java_client.android.options.localization.AppLocale;
 import io.appium.java_client.android.options.server.EspressoBuildConfig;
 import io.appium.java_client.android.options.signing.KeystoreConfig;
+import io.appium.java_client.chromium.options.ChromiumOptions;
 import io.appium.java_client.gecko.options.GeckoOptions;
 import io.appium.java_client.gecko.options.Verbosity;
 import io.appium.java_client.ios.options.XCUITestOptions;
@@ -41,6 +40,8 @@ import org.openqa.selenium.Platform;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -59,14 +60,14 @@ public class OptionsBuildingTest {
                 .setWdaBaseUrl("http://localhost:8000")
                 .setPermissions(new Permissions()
                         .withAppPermissions("com.apple.MobileSafari",
-                                ImmutableMap.of("calendar", "YES")))
+                                Map.of("calendar", "YES")))
                 .setSafariSocketChunkSize(10)
                 .setCommandTimeouts(new CommandTimeouts()
                         .withCommandTimeout("yolo", Duration.ofSeconds(1)));
         assertEquals(Duration.ofSeconds(10), options.getNewCommandTimeout().orElse(null));
         assertEquals(new URL("http://localhost:8000"), options.getWdaBaseUrl().orElse(null));
         assertNotNull(options.getPermissions()
-                .map((v) -> v.getAppPermissions("com.apple.MobileSafari"))
+                .map(v -> v.getAppPermissions("com.apple.MobileSafari"))
                 .orElse(null));
         assertEquals(10L, (long) options.getSafariSocketChunkSize().orElse(0));
         assertEquals(1L, options.getCommandTimeouts().orElse(null).left()
@@ -104,15 +105,15 @@ public class OptionsBuildingTest {
                         .withLanguage("zh")
                         .withVariant("hans"))
                 .setEspressoBuildConfig(new EspressoBuildConfig()
-                        .withAdditionalAppDependencies(ImmutableList.of(
+                        .withAdditionalAppDependencies(List.of(
                                 "com.dep1:1.2.3",
                                 "com.dep2:1.2.3"
                         ))
-                );
+            );
         assertEquals(Duration.ofSeconds(10), options.getNewCommandTimeout().orElse(null));
         assertEquals("CN", options.getAppLocale().orElse(null).getCountry().orElse(null));
         assertEquals(2, options.getEspressoBuildConfig().orElse(null)
-                        .left().getAdditionalAppDependencies().orElse(null).size());
+                .left().getAdditionalAppDependencies().orElse(null).size());
         assertTrue(options.doesForceEspressoRebuild().orElse(false));
     }
 
@@ -153,8 +154,8 @@ public class OptionsBuildingTest {
         assertEquals(AutomationName.GECKO, options.getAutomationName().orElse(null));
         options.setNewCommandTimeout(Duration.ofSeconds(10))
                 .setVerbosity(Verbosity.TRACE)
-                .setMozFirefoxOptions(ImmutableMap.of(
-                    "profile", "yolo"
+                .setMozFirefoxOptions(Map.of(
+                        "profile", "yolo"
                 ));
         assertEquals(Duration.ofSeconds(10), options.getNewCommandTimeout().orElse(null));
         assertEquals(Verbosity.TRACE, options.getVerbosity().orElse(null));
@@ -172,12 +173,41 @@ public class OptionsBuildingTest {
                 .setWebkitWebrtc(new WebrtcData()
                         .withDisableIceCandidateFiltering(true)
                         .withDisableInsecureMediaCapture(true)
-                );
+            );
         assertEquals(Duration.ofSeconds(10), options.getNewCommandTimeout().orElse(null));
         assertTrue(options.doesSafariUseSimulator().orElse(false));
         assertTrue(options.getWebkitWebrtc().orElse(null)
                 .doesDisableIceCandidateFiltering().orElse(false));
         assertTrue(options.getWebkitWebrtc().orElse(null)
                 .doesDisableInsecureMediaCapture().orElse(false));
+    }
+
+    @Test
+    public void canBuildChromiumOptions() {
+        // Given
+        // When
+        ChromiumOptions options = new ChromiumOptions();
+
+        options.setNewCommandTimeout(Duration.ofSeconds(10))
+                .setPlatformName(Platform.MAC.name())
+                .withBrowserName("Chrome")
+                .setAutodownloadEnabled(true)
+                .setBuildCheckDisabled(true)
+                .setChromeDriverPort(5485)
+                .setExecutable("/absolute/executable/path")
+                .setLogPath("/wonderful/log/path")
+                .setVerbose(true);
+
+        // Then
+        assertEquals(AutomationName.CHROMIUM, options.getAutomationName().orElse(null));
+        assertEquals("Chrome", options.getBrowserName());
+        assertTrue(options.isAutodownloadEnabled().orElse(null));
+        assertTrue(options.isBuildCheckDisabled().orElse(null));
+        assertEquals(5485, options.getChromeDriverPort().orElse(null));
+        assertFalse(options.getExecutableDir().isPresent());
+        assertEquals("/absolute/executable/path", options.getExecutable().orElse(null));
+        assertEquals("/wonderful/log/path", options.getLogPath().orElse(null));
+        assertFalse(options.isUseSystemExecutable().isPresent());
+        assertTrue(options.isVerbose().orElse(null));
     }
 }

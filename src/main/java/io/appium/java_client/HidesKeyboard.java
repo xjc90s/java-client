@@ -16,14 +16,26 @@
 
 package io.appium.java_client;
 
+import org.openqa.selenium.UnsupportedCommandException;
+
 import static io.appium.java_client.MobileCommand.HIDE_KEYBOARD;
 
-public interface HidesKeyboard extends ExecutesMethod {
+public interface HidesKeyboard extends ExecutesMethod, CanRememberExtensionPresence {
 
     /**
      * Hides the keyboard if it is showing.
+     * If the on-screen keyboard does not have any dedicated button that
+     * hides it then an error is going to be thrown. In such case you must emulate
+     * same actions an app user would do to hide the keyboard.
+     * See the documentation for 'mobile: hideKeyboard' extension for more details.
      */
     default void hideKeyboard() {
-        execute(HIDE_KEYBOARD);
+        final String extName = "mobile: hideKeyboard";
+        try {
+            CommandExecutionHelper.executeScript(assertExtensionExists(extName), extName);
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            CommandExecutionHelper.execute(markExtensionAbsence(extName), HIDE_KEYBOARD);
+        }
     }
 }

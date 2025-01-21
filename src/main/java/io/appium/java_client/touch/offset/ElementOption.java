@@ -8,9 +8,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
+@Deprecated
 public class ElementOption extends PointOption<ElementOption> {
 
     private String elementId;
@@ -82,7 +83,7 @@ public class ElementOption extends PointOption<ElementOption> {
      * @return self-reference
      */
     public ElementOption withElement(WebElement element) {
-        checkNotNull(element);
+        requireNonNull(element);
         checkArgument(true, "Element should be an instance of the class which "
                 + "extends org.openqa.selenium.remote.RemoteWebElement",
             element instanceof RemoteWebElement);

@@ -16,31 +16,38 @@
 
 package io.appium.java_client.clipboard;
 
+import io.appium.java_client.CanRememberExtensionPresence;
 import io.appium.java_client.CommandExecutionHelper;
 import io.appium.java_client.ExecutesMethod;
+import org.openqa.selenium.UnsupportedCommandException;
 
 import java.nio.charset.StandardCharsets;
-import java.util.AbstractMap;
 import java.util.Base64;
+import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static io.appium.java_client.MobileCommand.GET_CLIPBOARD;
 import static io.appium.java_client.MobileCommand.SET_CLIPBOARD;
-import static io.appium.java_client.MobileCommand.prepareArguments;
+import static java.util.Objects.requireNonNull;
 
-public interface HasClipboard extends ExecutesMethod {
+public interface HasClipboard extends ExecutesMethod, CanRememberExtensionPresence {
     /**
      * Set the content of device's clipboard.
      *
-     * @param contentType one of supported content types.
+     * @param contentType   one of supported content types.
      * @param base64Content base64-encoded content to be set.
      */
     default void setClipboard(ClipboardContentType contentType, byte[] base64Content) {
-        String[] parameters = new String[]{"content", "contentType"};
-        Object[] values = new Object[]{new String(checkNotNull(base64Content), StandardCharsets.UTF_8),
-                contentType.name().toLowerCase()};
-        CommandExecutionHelper.execute(this, new AbstractMap.SimpleEntry<>(SET_CLIPBOARD,
-                prepareArguments(parameters, values)));
+        final String extName = "mobile: setClipboard";
+        var args = Map.of(
+                "content", new String(requireNonNull(base64Content), StandardCharsets.UTF_8),
+                "contentType", contentType.name().toLowerCase()
+        );
+        try {
+            CommandExecutionHelper.executeScript(assertExtensionExists(extName), extName, args);
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            CommandExecutionHelper.execute(this, Map.entry(SET_CLIPBOARD, args));
+        }
     }
 
     /**
@@ -50,8 +57,14 @@ public interface HasClipboard extends ExecutesMethod {
      * @return the actual content of the clipboard as base64-encoded string or an empty string if the clipboard is empty
      */
     default String getClipboard(ClipboardContentType contentType) {
-        return CommandExecutionHelper.execute(this, new AbstractMap.SimpleEntry<>(GET_CLIPBOARD,
-                prepareArguments("contentType", contentType.name().toLowerCase())));
+        final String extName = "mobile: getClipboard";
+        var args = Map.of("contentType", contentType.name().toLowerCase());
+        try {
+            return CommandExecutionHelper.executeScript(assertExtensionExists(extName), extName, args);
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            return CommandExecutionHelper.execute(this, Map.entry(GET_CLIPBOARD, args));
+        }
     }
 
     /**

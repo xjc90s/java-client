@@ -16,7 +16,6 @@
 
 package io.appium.java_client.android;
 
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.AppiumClientConfig;
 import io.appium.java_client.AppiumDriver;
 import io.appium.java_client.CommandExecutionHelper;
@@ -30,7 +29,6 @@ import io.appium.java_client.LocksDevice;
 import io.appium.java_client.PerformsTouchActions;
 import io.appium.java_client.PullsFiles;
 import io.appium.java_client.PushesFiles;
-import io.appium.java_client.SupportsLegacyAppManagement;
 import io.appium.java_client.android.connection.HasNetworkConnection;
 import io.appium.java_client.android.geolocation.SupportsExtendedGeolocationCommands;
 import io.appium.java_client.android.nativekey.PressesKey;
@@ -50,13 +48,6 @@ import org.openqa.selenium.remote.http.ClientConfig;
 import org.openqa.selenium.remote.http.HttpClient;
 
 import java.net.URL;
-import java.util.Collections;
-import java.util.Map;
-
-import static io.appium.java_client.android.AndroidMobileCommandHelper.endTestCoverageCommand;
-import static io.appium.java_client.android.AndroidMobileCommandHelper.openNotificationsCommand;
-import static io.appium.java_client.android.AndroidMobileCommandHelper.toggleLocationServicesCommand;
-import static org.openqa.selenium.remote.DriverCommand.EXECUTE_SCRIPT;
 
 /**
  * Android driver implementation.
@@ -71,7 +62,6 @@ public class AndroidDriver extends AppiumDriver implements
         HasDeviceTime,
         PullsFiles,
         InteractsWithApps,
-        SupportsLegacyAppManagement,
         HasAppStrings,
         HasNetworkConnection,
         PushesFiles,
@@ -90,6 +80,8 @@ public class AndroidDriver extends AppiumDriver implements
         HasBattery<AndroidBatteryInfo>,
         ExecuteCDPCommand,
         CanReplaceElementValue,
+        SupportsGpsStateManagement,
+        HasNotifications,
         SupportsExtendedGeolocationCommands {
     private static final String ANDROID_PLATFORM = Platform.ANDROID.name();
 
@@ -254,35 +246,21 @@ public class AndroidDriver extends AppiumDriver implements
         super(remoteSessionAddress, ANDROID_PLATFORM, automationName);
     }
 
-    /**
-     * Get test-coverage data.
-     *
-     * @param intent intent to broadcast.
-     * @param path   path to .ec file.
-     */
-    public void endTestCoverage(String intent, String path) {
-        CommandExecutionHelper.execute(this, endTestCoverageCommand(intent, path));
-    }
-
-    /**
-     * Open the notification shade, on Android devices.
-     */
-    public void openNotifications() {
-        CommandExecutionHelper.execute(this, openNotificationsCommand());
-    }
-
-    public void toggleLocationServices() {
-        CommandExecutionHelper.execute(this, toggleLocationServicesCommand());
-    }
-
-    @SuppressWarnings("unchecked")
     @Override
     public AndroidBatteryInfo getBatteryInfo() {
-        return new AndroidBatteryInfo((Map<String, Object>) execute(EXECUTE_SCRIPT, ImmutableMap.of(
-                "script", "mobile: batteryInfo", "args", Collections.emptyList())).getValue());
+        return new AndroidBatteryInfo(CommandExecutionHelper.executeScript(this, "mobile: batteryInfo"));
     }
 
+    /**
+     * Provides the location context.
+     *
+     * @return instance of {@link RemoteLocationContext}
+     * @deprecated This method, {@link org.openqa.selenium.html5.LocationContext} and {@link RemoteLocationContext}
+     *     interface are deprecated, use {@link #getLocation()} and
+     *     {@link #setLocation(io.appium.java_client.Location)} instead.
+     */
     @Override
+    @Deprecated(forRemoval = true)
     public RemoteLocationContext getLocationContext() {
         return locationContext;
     }
@@ -290,7 +268,7 @@ public class AndroidDriver extends AppiumDriver implements
     @Override
     public synchronized StringWebSocketClient getLogcatClient() {
         if (logcatClient == null) {
-            logcatClient = new StringWebSocketClient();
+            logcatClient = new StringWebSocketClient(getHttpClient());
         }
         return logcatClient;
     }

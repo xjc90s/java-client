@@ -17,7 +17,6 @@
 
 package io.appium.java_client;
 
-import com.google.common.collect.ImmutableMap;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.remote.ErrorCodes;
 
@@ -32,9 +31,7 @@ public class ErrorCodesMobile extends ErrorCodes {
 
     public static final int NO_SUCH_CONTEXT = 35;
 
-    private static Map<Integer, String> statusToState =
-        ImmutableMap.<Integer, String>builder().put(NO_SUCH_CONTEXT, "No such context found")
-            .build();
+    private static Map<Integer, String> statusToState = Map.of(NO_SUCH_CONTEXT, "No such context found");
 
     /**
     * Returns the exception type that corresponds to the given {@code statusCode}. All unrecognized
@@ -43,6 +40,7 @@ public class ErrorCodesMobile extends ErrorCodes {
     * @param statusCode The status code to convert.
     * @return The exception type that corresponds to the provided status
     */
+    @Override
     public Class<? extends WebDriverException> getExceptionType(int statusCode) {
         switch (statusCode) {
             case NO_SUCH_CONTEXT:
@@ -60,6 +58,7 @@ public class ErrorCodesMobile extends ErrorCodes {
      * @return The exception type that corresponds to the provided error message or {@code null} if
      *     there are no matching mobile exceptions.
      */
+    @Override
     public Class<? extends WebDriverException> getExceptionType(String message) {
         for (Map.Entry<Integer, String> entry : statusToState.entrySet()) {
             if (message.contains(entry.getValue())) {
@@ -75,6 +74,7 @@ public class ErrorCodesMobile extends ErrorCodes {
     * @param thrown The thrown error.
     * @return The corresponding status code for the given thrown error.
     */
+    @Override
     public int toStatusCode(Throwable thrown) {
         if (thrown instanceof NoSuchContextException) {
             return NO_SUCH_CONTEXT;

@@ -16,36 +16,34 @@
 
 package io.appium.java_client.pagefactory.interceptors;
 
-import net.sf.cglib.proxy.MethodInterceptor;
-import net.sf.cglib.proxy.MethodProxy;
+import io.appium.java_client.proxy.MethodCallListener;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.pagefactory.ElementLocator;
 
-import java.lang.reflect.InvocationTargetException;
+import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 
-public abstract class InterceptorOfAListOfElements implements MethodInterceptor {
+public abstract class InterceptorOfAListOfElements implements MethodCallListener {
     protected final ElementLocator locator;
 
-    public InterceptorOfAListOfElements(ElementLocator locator) {
+    public InterceptorOfAListOfElements(@Nullable ElementLocator locator) {
         this.locator = locator;
     }
 
-    protected abstract Object getObject(List<WebElement> elements, Method method, Object[] args)
-        throws InvocationTargetException, IllegalAccessException, InstantiationException, Throwable;
+    protected abstract Object getObject(
+            List<WebElement> elements, Method method, Object[] args
+    ) throws Throwable;
 
-    /**
-     * Look at {@link MethodInterceptor#intercept(Object, Method, Object[], MethodProxy)}.
-     */
-    public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy)
-        throws Throwable {
-        if (Object.class.equals(method.getDeclaringClass())) {
-            return proxy.invokeSuper(obj, args);
+    @Override
+    public Object call(Object obj, Method method, Object[] args, Callable<?> original) throws Throwable {
+        if (locator == null || Object.class == method.getDeclaringClass()) {
+            return original.call();
         }
 
-        List<WebElement> realElements = new ArrayList<>(locator.findElements());
+        final var realElements = new ArrayList<>(locator.findElements());
         return getObject(realElements, method, args);
     }
 }

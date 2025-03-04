@@ -16,12 +16,12 @@
 
 package io.appium.java_client.screenrecording;
 
-import com.google.common.collect.ImmutableMap;
-
 import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 public abstract class BaseStartScreenRecordingOptions<T extends BaseStartScreenRecordingOptions<T>>
@@ -36,7 +36,7 @@ public abstract class BaseStartScreenRecordingOptions<T extends BaseStartScreenR
      * @return self instance for chaining.
      */
     public T withTimeLimit(Duration timeLimit) {
-        this.timeLimit = checkNotNull(timeLimit);
+        this.timeLimit = requireNonNull(timeLimit);
         //noinspection unchecked
         return (T) this;
     }
@@ -66,10 +66,9 @@ public abstract class BaseStartScreenRecordingOptions<T extends BaseStartScreenR
 
     @Override
     public Map<String, Object> build() {
-        final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        builder.putAll(super.build());
-        ofNullable(timeLimit).map(x -> builder.put("timeLimit", x.getSeconds()));
-        ofNullable(forceRestart).map(x -> builder.put("forceRestart", x));
-        return builder.build();
+        var map = new HashMap<>(super.build());
+        ofNullable(timeLimit).map(x -> map.put("timeLimit", x.getSeconds()));
+        ofNullable(forceRestart).map(x -> map.put("forceRestart", x));
+        return Collections.unmodifiableMap(map);
     }
 }

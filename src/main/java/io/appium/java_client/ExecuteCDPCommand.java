@@ -16,7 +16,6 @@
 
 package io.appium.java_client;
 
-import com.google.common.collect.ImmutableMap;
 import org.openqa.selenium.remote.Response;
 
 import javax.annotation.Nullable;
@@ -24,8 +23,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static io.appium.java_client.MobileCommand.EXECUTE_GOOGLE_CDP_COMMAND;
+import static java.util.Objects.requireNonNull;
 
 public interface ExecuteCDPCommand extends ExecutesMethod {
 
@@ -40,11 +39,11 @@ public interface ExecuteCDPCommand extends ExecutesMethod {
      */
     default Map<String, Object> executeCdpCommand(String command, @Nullable Map<String, Object> params) {
         Map<String, Object> data = new HashMap<>();
-        data.put("cmd", checkNotNull(command));
+        data.put("cmd", requireNonNull(command));
         data.put("params", params == null ? Collections.emptyMap() : params);
         Response response = execute(EXECUTE_GOOGLE_CDP_COMMAND, data);
         //noinspection unchecked
-        return ImmutableMap.copyOf((Map<String, Object>) response.getValue());
+        return Collections.unmodifiableMap((Map<String, Object>) response.getValue());
     }
 
     /**

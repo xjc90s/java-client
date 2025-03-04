@@ -22,13 +22,16 @@ import java.lang.reflect.Field;
 
 public class ReflectionHelpers {
 
+    private ReflectionHelpers() {
+    }
+
     /**
      * Sets the given value to a private instance field.
      *
-     * @param cls The target class or a superclass.
-     * @param target Target instance.
+     * @param cls       The target class or a superclass.
+     * @param target    Target instance.
      * @param fieldName Target field name.
-     * @param newValue The value to be set.
+     * @param newValue  The value to be set.
      * @return The same instance for chaining.
      */
     public static <T> T setPrivateFieldValue(Class<?> cls, T target, String fieldName, Object newValue) {
@@ -45,8 +48,8 @@ public class ReflectionHelpers {
     /**
      * Fetches the value of a private instance field.
      *
-     * @param cls The target class or a superclass.
-     * @param target Target instance.
+     * @param cls       The target class or a superclass.
+     * @param target    Target instance.
      * @param fieldName Target field name.
      * @param fieldType Field type.
      * @return The retrieved field value.

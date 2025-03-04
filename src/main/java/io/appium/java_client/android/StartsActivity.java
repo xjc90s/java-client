@@ -16,46 +16,36 @@
 
 package io.appium.java_client.android;
 
+import io.appium.java_client.CanRememberExtensionPresence;
 import io.appium.java_client.CommandExecutionHelper;
 import io.appium.java_client.ExecutesMethod;
+import org.openqa.selenium.UnsupportedCommandException;
 
-import static io.appium.java_client.android.AndroidMobileCommandHelper.currentActivityCommand;
-import static io.appium.java_client.android.AndroidMobileCommandHelper.currentPackageCommand;
-import static io.appium.java_client.android.AndroidMobileCommandHelper.startActivityCommand;
+import javax.annotation.Nullable;
 
-public interface StartsActivity extends ExecutesMethod {
-    /**
-     * This method should start arbitrary activity during a test. If the activity belongs to
-     * another application, that application is started and the activity is opened.
-     * <p>
-     * Usage:
-     * </p>
-     * <pre>
-     *     {@code
-     *     Activity activity = new Activity("app package goes here", "app activity goes here");
-     *     activity.setWaitAppPackage("app wait package goes here");
-     *     activity.setWaitAppActivity("app wait activity goes here");
-     *     driver.startActivity(activity);
-     *     }
-     * </pre>
-     *
-     * @param activity The {@link Activity} object
-     */
-    default void startActivity(Activity activity) {
-        CommandExecutionHelper.execute(this,
-            startActivityCommand(activity.getAppPackage(), activity.getAppActivity(),
-                activity.getAppWaitPackage(), activity.getAppWaitActivity(),
-                activity.getIntentAction(), activity.getIntentCategory(), activity.getIntentFlags(),
-                activity.getOptionalIntentArguments(), activity.isStopApp()));
-    }
+import java.util.Map;
 
+import static io.appium.java_client.MobileCommand.CURRENT_ACTIVITY;
+import static io.appium.java_client.MobileCommand.GET_CURRENT_PACKAGE;
+
+public interface StartsActivity extends ExecutesMethod, CanRememberExtensionPresence {
     /**
      * Get the current activity being run on the mobile device.
      *
      * @return a current activity being run on the mobile device.
      */
+    @Nullable
     default String currentActivity() {
-        return CommandExecutionHelper.execute(this, currentActivityCommand());
+        final String extName = "mobile: getCurrentActivity";
+        try {
+            return CommandExecutionHelper.executeScript(assertExtensionExists(extName), extName);
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            return CommandExecutionHelper.execute(
+                    markExtensionAbsence(extName),
+                    Map.entry(CURRENT_ACTIVITY, Map.of())
+            );
+        }
     }
 
     /**
@@ -63,7 +53,17 @@ public interface StartsActivity extends ExecutesMethod {
      *
      * @return a current package being run on the mobile device.
      */
+    @Nullable
     default String getCurrentPackage() {
-        return CommandExecutionHelper.execute(this, currentPackageCommand());
+        final String extName = "mobile: getCurrentPackage";
+        try {
+            return CommandExecutionHelper.executeScript(assertExtensionExists(extName), extName);
+        } catch (UnsupportedCommandException e) {
+            // TODO: Remove the fallback
+            return CommandExecutionHelper.execute(
+                    markExtensionAbsence(extName),
+                    Map.entry(GET_CURRENT_PACKAGE, Map.of())
+            );
+        }
     }
 }

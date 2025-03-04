@@ -16,14 +16,15 @@
 
 package io.appium.java_client.android.appmanagement;
 
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.appmanagement.BaseInstallApplicationOptions;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 public class AndroidInstallApplicationOptions extends
@@ -64,7 +65,7 @@ public class AndroidInstallApplicationOptions extends
      * @return self instance for chaining.
      */
     public AndroidInstallApplicationOptions withTimeout(Duration timeout) {
-        checkArgument(!checkNotNull(timeout).isNegative(), "The timeout value cannot be negative");
+        checkArgument(!requireNonNull(timeout).isNegative(), "The timeout value cannot be negative");
         this.timeout = timeout;
         return this;
     }
@@ -138,12 +139,12 @@ public class AndroidInstallApplicationOptions extends
 
     @Override
     public Map<String, Object> build() {
-        final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        ofNullable(replace).map(x -> builder.put("replace", x));
-        ofNullable(timeout).map(x -> builder.put("timeout", x.toMillis()));
-        ofNullable(allowTestPackages).map(x -> builder.put("allowTestPackages", x));
-        ofNullable(useSdcard).map(x -> builder.put("useSdcard", x));
-        ofNullable(grantPermissions).map(x -> builder.put("grantPermissions", x));
-        return builder.build();
+        var map = new HashMap<String, Object>();
+        ofNullable(replace).ifPresent(x -> map.put("replace", x));
+        ofNullable(timeout).ifPresent(x -> map.put("timeout", x.toMillis()));
+        ofNullable(allowTestPackages).ifPresent(x -> map.put("allowTestPackages", x));
+        ofNullable(useSdcard).ifPresent(x -> map.put("useSdcard", x));
+        ofNullable(grantPermissions).ifPresent(x -> map.put("grantPermissions", x));
+        return Collections.unmodifiableMap(map);
     }
 }

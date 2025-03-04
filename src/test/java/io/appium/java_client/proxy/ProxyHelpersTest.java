@@ -43,7 +43,8 @@ class ProxyHelpersTest {
         }
 
         @Override
-        protected void startSession(Capabilities capabilities) {}
+        protected void startSession(Capabilities capabilities) {
+        }
     }
 
     @Test
@@ -92,7 +93,6 @@ class ProxyHelpersTest {
             }
         };
         RemoteWebDriver driver = createProxy(RemoteWebDriver.class, Collections.singletonList(listener));
-
         assertThrows(
                 IllegalStateException.class,
                 () -> driver.get("http://example.com/")

@@ -1,19 +1,17 @@
 package io.appium.java_client;
 
-import com.google.common.collect.ImmutableMap;
 import io.appium.java_client.internal.CapabilityHelpers;
 import org.openqa.selenium.ContextAware;
 import org.openqa.selenium.HasCapabilities;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.remote.CapabilityType;
 
-import java.util.Collections;
-
-import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.openqa.selenium.remote.DriverCommand.EXECUTE_SCRIPT;
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 public interface HasBrowserCheck extends ExecutesMethod, HasCapabilities {
+    String NATIVE_CONTEXT = "NATIVE_APP";
+
     /**
      * Validates if the driver is currently in a web browser context.
      *
@@ -22,12 +20,11 @@ public interface HasBrowserCheck extends ExecutesMethod, HasCapabilities {
     default boolean isBrowser() {
         String browserName = CapabilityHelpers.getCapability(getCapabilities(),
                 CapabilityType.BROWSER_NAME, String.class);
-        if (!isBlank(browserName)) {
+        if (!isNullOrEmpty(browserName)) {
             try {
-                return (boolean) execute(EXECUTE_SCRIPT, ImmutableMap.of(
-                        "script", "return !!window.navigator;",
-                        "args", Collections.emptyList()
-                )).getValue();
+                return requireNonNull(
+                        CommandExecutionHelper.executeScript(this, "return !!window.navigator;")
+                );
             } catch (WebDriverException ign) {
                 // ignore
             }
@@ -36,7 +33,8 @@ public interface HasBrowserCheck extends ExecutesMethod, HasCapabilities {
             return false;
         }
         try {
-            return !containsIgnoreCase(((ContextAware) this).getContext(), "NATIVE_APP");
+            var context = ((ContextAware) this).getContext();
+            return context != null && !context.toUpperCase().contains(NATIVE_CONTEXT);
         } catch (WebDriverException e) {
             return false;
         }

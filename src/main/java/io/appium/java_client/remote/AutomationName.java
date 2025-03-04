@@ -18,8 +18,6 @@ package io.appium.java_client.remote;
 
 public interface AutomationName {
     // Officially supported drivers
-    @Deprecated
-    String APPIUM = "Appium";
     // https://github.com/appium/appium-xcuitest-driver
     String IOS_XCUI_TEST = "XCuiTest";
     // https://github.com/appium/appium-uiautomator2-driver
@@ -34,8 +32,12 @@ public interface AutomationName {
     String SAFARI = "Safari";
     // https://github.com/appium/appium-geckodriver
     String GECKO = "Gecko";
+    // https://github.com/appium/appium-chromium-driver
+    String CHROMIUM = "Chromium";
 
     // Third-party drivers
     // https://github.com/YOU-i-Labs/appium-youiengine-driver
     String YOUI_ENGINE = "youiengine";
+    //https://github.com/AppiumTestDistribution/appium-flutter-integration-driver
+    String FLUTTER_INTEGRATION = "FlutterIntegration";
 }

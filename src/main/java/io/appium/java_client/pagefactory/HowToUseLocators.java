@@ -29,19 +29,9 @@ public @interface HowToUseLocators {
      * or the searching by all possible locators.
      *
      * @return the strategy which defines how to use locators which are described by the
-     * {@link AndroidFindBy} annotation
+     *     {@link AndroidFindBy} annotation
      */
     LocatorGroupStrategy androidAutomation() default LocatorGroupStrategy.CHAIN;
-
-    /**
-     * The strategy which defines how to use locators which are described by the
-     * {@link WindowsFindBy} annotation. These annotations can define the chained searching
-     * or the searching by all possible locators.
-     *
-     * @return the strategy which defines how to use locators which are described by the
-     * {@link WindowsFindBy} annotation
-     */
-    LocatorGroupStrategy windowsAutomation() default LocatorGroupStrategy.CHAIN;
 
     /**
      * The strategy which defines how to use locators which are described by the
@@ -49,7 +39,7 @@ public @interface HowToUseLocators {
      * or the searching by all possible locators.
      *
      * @return the strategy which defines how to use locators which are described by the
-     * {@link iOSXCUITFindBy} annotation
+     *     {@link iOSXCUITFindBy} annotation
      */
     LocatorGroupStrategy iOSXCUITAutomation() default LocatorGroupStrategy.CHAIN;
 }
